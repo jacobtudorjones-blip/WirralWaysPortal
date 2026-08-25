@@ -1,7 +1,7 @@
 {
   "name": "wirral-ways-room-booking",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "Wirral Ways Room Booking System",
   "type": "module",
   "scripts": {
