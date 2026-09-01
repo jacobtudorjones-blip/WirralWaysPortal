@@ -4,10 +4,24 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-Wirral Ways Room Booking — a Vite + React 18 single-page app (see
-README.md for the full picture). No backend of its own: Supabase (REST) is
-used as a JSON key/value store, Brevo sends email, both called directly
-from the browser.
+Two apps sharing one Vite + React 18 project and one deploy (see
+README.md for the full picture):
+
+- **Room Booking** (`/`, `src/App.jsx` + `src/components/`) — the
+  original app. No backend of its own: Supabase (REST) is used as a JSON
+  key/value store, Brevo sends email, both called directly from the
+  browser.
+- **Staff Portal** (`/staff/*`, `src/staff/`) — sign in/out, WFH,
+  outreach and "working elsewhere" tracking, a live "who's in" roll-call
+  view, and staff directory / user management (name, email, site, role,
+  manager). Rebuilt from a single-file HTML kiosk app into real routed
+  pages with `react-router-dom`. Also talks to Supabase directly from the
+  browser (its own `staff_*` tables — see `supabase/staff-portal-schema.sql`),
+  same architecture as Room Booking, no server of its own.
+
+Routing lives in `src/main.jsx`: `/staff/*` mounts `StaffApp`, everything
+else mounts the Room Booking `App`. `public/_redirects` sends all paths to
+`index.html` so client-side routing works on Netlify.
 
 ## Commands
 
@@ -27,9 +41,18 @@ plain JS (not TypeScript) project with no test suite yet.
 - Framework-agnostic logic (date/time helpers, storage, email, ICS export)
   lives under `src/lib/`, not inside components.
 - Shared data (rooms, sites, approvers, brand colours) lives in
-  `src/data/rooms.js` — import from there rather than redefining.
+  `src/data/rooms.js` — import from there rather than redefining. Staff
+  Portal config (office sites, remote-work modes, directory roles) lives in
+  `src/data/staff.js`, which imports sites/colours from `rooms.js` rather
+  than redefining them.
 - Secrets are read via `import.meta.env.VITE_*` (see `.env.example`) —
   never hardcode API keys/URLs in source.
+- Staff Portal follows the same per-concern layout as Room Booking, under
+  `src/staff/`: `pages/` (one route each, mounted in `StaffApp.jsx`),
+  `components/`, `lib/` (Supabase table hooks, identity/session helpers,
+  formatting). Generic Supabase REST helpers (`listRows`/`insertRow`/
+  `updateRow`/`deleteRow` for any `staff_*` table) live in
+  `src/lib/staffApi.js`, next to `storage.js`.
 
 ## Things worth knowing before changing behaviour
 
@@ -43,3 +66,14 @@ plain JS (not TypeScript) project with no test suite yet.
 - `hasConflict` (src/lib/helpers.js) only treats `status === "confirmed"`
   bookings as blocking — pending/cancelled/auto-released bookings are
   intentionally not conflict sources.
+- Staff Portal admin access (`/staff/admin`, `/staff/admin/users`) and the
+  "Who's in" gate work exactly like APPROVERS above: an email checked
+  against the `role` column on `staff_users`, client-side, no real auth.
+  It stops casual access, not someone calling Supabase's REST API directly
+  with the anon key. Don't present it as more secure than that.
+- The original uploaded single-file version of the Staff Portal had a
+  Supabase **service-role key hardcoded in a PHP proxy** and a hardcoded
+  admin password in client JS. Neither was carried over — that service-role
+  key must be treated as compromised and rotated in the Supabase dashboard
+  regardless of anything in this repo. See `supabase/staff-portal-schema.sql`
+  for the RLS-based replacement.
