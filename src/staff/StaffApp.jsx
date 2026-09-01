@@ -9,6 +9,7 @@ import Outreach from "./pages/Outreach.jsx";
 import WhoIsIn from "./pages/WhoIsIn.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminUsers from "./pages/AdminUsers.jsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 
 function NotFound() {
   return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, color: "#6b7280" }}>Page not found.</div>;
@@ -27,6 +28,7 @@ function StaffApp() {
         <Route path="who" element={<WhoIsIn />} />
         <Route path="admin" element={<AdminDashboard />} />
         <Route path="admin/users" element={<AdminUsers />} />
+        <Route path="privacy" element={<PrivacyPolicy />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

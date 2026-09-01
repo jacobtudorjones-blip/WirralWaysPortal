@@ -7,6 +7,7 @@ import { insertRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import NamePicker from "../components/NamePicker.jsx";
 import PageWrap from "../components/PageWrap.jsx";
+import PrivacyNote from "../components/PrivacyNote.jsx";
 
 const PERSON_TYPES = [
   { value: "staff", label: "Staff" },
@@ -99,6 +100,8 @@ function SignIn() {
             <label style={lbl}>Notes (optional)</label>
             <textarea style={{ ...inp, minHeight: 70, resize: "vertical" }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. reason for visit" />
           </div>
+
+          <PrivacyNote />
 
           {error && <div style={{ color: CGL.neon, fontSize: 13, marginBottom: 12 }}>{error}</div>}
 

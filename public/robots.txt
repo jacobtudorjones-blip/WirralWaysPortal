@@ -1,0 +1,7 @@
+# This is an internal staff tool (room booking + staff attendance/sign-in
+# records), not a public site — it isn't meant to be discovered via search.
+# Access is already gated by email allowlists in-app; keeping it out of
+# search indexes is an extra, cheap layer on top of that, not a substitute
+# for it (the RLS caveats in README.md still apply).
+User-agent: *
+Disallow: /

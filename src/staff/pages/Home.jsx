@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CGL } from "../../data/rooms.js";
 import { OFFICE_SITES } from "../../data/staff.js";
 import { listRows } from "../../lib/staffApi.js";
+import { useDocumentTitle } from "../lib/useDocumentTitle.js";
 
 const TILES = [
   { to: "/staff/sign-in", label: "Sign in", sub: "Arriving at a site", icon: "✅", color: CGL.blackcurrant, light: "#f0e8f9" },
@@ -44,6 +45,7 @@ function useLiveCounts() {
 }
 
 function Home() {
+  useDocumentTitle("Home");
   const counts = useLiveCounts();
   const totalIn = counts ? Object.values(counts.perSite).reduce((a, b) => a + b, 0) + counts.wfh + counts.elsewhere + counts.outreach : null;
 

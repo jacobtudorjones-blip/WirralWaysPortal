@@ -2,9 +2,10 @@
 // current page. This is what makes it "feel like a website" — real URLs
 // (/staff/sign-in, /staff/who, /staff/admin/users, …) with a persistent
 // nav bar, instead of one HTML file toggling <div> "screens" with JS.
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, Link } from "react-router-dom";
 import { CGL } from "../../data/rooms.js";
 import LiveClock from "../../components/LiveClock.jsx";
+import Breadcrumbs from "./Breadcrumbs.jsx";
 
 const NAV_LINKS = [
   { to: "/staff", label: "Home", end: true },
@@ -45,9 +46,13 @@ function StaffLayout() {
           <a href="/" style={{ fontSize: 12, color: "#fff", opacity: 0.85 }}>Room Booking →</a>
         </div>
       </header>
+      <Breadcrumbs />
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <Outlet />
       </main>
+      <footer style={{ textAlign: "center", padding: "14px 20px", fontSize: 11, color: "#9ca3af" }}>
+        <Link to="/staff/privacy" style={{ color: "#9ca3af" }}>Privacy notice</Link>
+      </footer>
     </div>
   );
 }

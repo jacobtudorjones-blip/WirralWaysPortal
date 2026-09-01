@@ -9,6 +9,7 @@ import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { formatElapsed, formatClock, initials } from "../lib/format.js";
 import NamePicker from "./NamePicker.jsx";
 import PageWrap from "./PageWrap.jsx";
+import PrivacyNote from "./PrivacyNote.jsx";
 
 function StartFinishFlow({ table, title, subtitle, color, fields = [] }) {
   const { activeUsers } = useStaffUsers();
@@ -97,6 +98,7 @@ function StartFinishFlow({ table, title, subtitle, color, fields = [] }) {
             <label style={lbl}>Notes (optional)</label>
             <textarea style={{ ...inp, minHeight: 64, resize: "vertical" }} value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
+          <PrivacyNote />
           <button type="submit" disabled={!name.trim() || saving} style={{
             width: "100%", background: color, color: "#fff", border: "none", borderRadius: 12, padding: 15,
             fontSize: 15, fontWeight: 800, cursor: "pointer", opacity: (!name.trim() || saving) ? 0.5 : 1,

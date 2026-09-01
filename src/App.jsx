@@ -45,6 +45,17 @@ function App() {
   const [loginNotifs,setLoginNotifs] = useState(null);   // shown after data loads post-login
   const [pendingIdentity,setPendingIdentity] = useState(null); // identity waiting for bookings to load
 
+  // ── PAGE TITLE: keep the browser tab meaningful per tab, not stuck on
+  // the static index.html title — helps when several tabs/bookmarks are open.
+  useEffect(()=>{
+    const TAB_TITLES = {
+      home:"Home", mybookings:"My Bookings", dailyview:"Daily View", weeklyview:"Weekly View",
+      floorplans:"Floor Plans", approver:"Approvals", analytics:"Analytics",
+      allbookings:"All Bookings", audit:"Audit Log",
+    };
+    document.title = (TAB_TITLES[tab] ? TAB_TITLES[tab]+" · " : "") + "Wirral Ways — Room Booking";
+  },[tab]);
+
   useEffect(()=>{
     async function loadData() {
       const b=await loadKey("ww_bookings_v4");
@@ -466,6 +477,7 @@ function App() {
             <div style={{background:CGL.saffron,color:CGL.black,fontSize:10,fontWeight:800,padding:"3px 10px",borderRadius:20}}>{pending.length} to approve</div>
           )}
           <div style={{color:CGL.orchid,fontSize:11,fontWeight:600,marginRight:4,display:"none"}}>{user.name}</div>
+          <a href="/staff" style={{background:(CGL.lavender)+"30",color:CGL.white,border:"1px solid "+(CGL.lavender)+"40",borderRadius:7,padding:"5px 12px",fontSize:11,fontWeight:700,fontFamily:"inherit",textDecoration:"none"}}>Staff Portal →</a>
           <button onClick={()=>setShowHelp(true)} style={{background:(CGL.lavender)+"30",color:CGL.white,border:"1px solid "+(CGL.lavender)+"40",borderRadius:7,padding:"5px 12px",fontSize:11,cursor:"pointer",fontWeight:700,fontFamily:"inherit"}}>Help ?</button>
           <button onClick={handleSignOut} style={{background:(CGL.neon)+"20",color:CGL.white,border:"1px solid "+(CGL.neon)+"40",borderRadius:7,padding:"5px 12px",fontSize:11,cursor:"pointer",fontWeight:700,fontFamily:"inherit"}}>Sign out</button>
           <button onClick={()=>setShowBulkForm(true)} style={{background:(CGL.lavender)+"40",color:CGL.white,border:"1px solid "+(CGL.lavender)+"60",borderRadius:8,padding:"8px 14px",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"inherit"}}>⊞ Bulk request</button>

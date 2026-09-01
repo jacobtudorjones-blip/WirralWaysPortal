@@ -77,6 +77,7 @@ instead of shipping it to the browser.
 ```
 index.html            Vite entry HTML
 public/_redirects     Netlify SPA fallback (all paths → index.html)
+public/robots.txt     Disallows all crawling — internal tool, not meant to be indexed
 supabase/
   staff-portal-schema.sql   Staff Portal tables + RLS policies — run once per Supabase project
 src/
@@ -96,13 +97,15 @@ src/
   components/          Room Booking components (forms, modals, views)
   staff/               Staff Portal — see below
     StaffApp.jsx         route table, mounted at /staff/*
-    components/          StaffLayout (header/nav), NamePicker, EmailGate,
-                          UserFormModal, StartFinishFlow (shared WFH/
-                          outreach/elsewhere start-finish UI), PageWrap
+    components/          StaffLayout (header/nav/breadcrumbs), NamePicker,
+                          EmailGate, UserFormModal, StartFinishFlow (shared
+                          WFH/outreach/elsewhere UI), PageWrap, PrivacyNote,
+                          Breadcrumbs
     pages/                Home, SignIn, SignOut, Wfh, Elsewhere, Outreach,
-                           WhoIsIn, AdminDashboard, AdminUsers
+                           WhoIsIn, AdminDashboard, AdminUsers, PrivacyPolicy
     lib/                  useStaffUsers (directory hook), identity.js
-                           (admin session), format.js (elapsed time, etc.)
+                           (admin session), format.js (elapsed time, etc.),
+                           useDocumentTitle (per-page browser tab title)
 ```
 
 ## Staff Portal
@@ -130,7 +133,15 @@ anon key is meant to be public as long as RLS is configured correctly (see
 `/staff/wfh`, `/staff/elsewhere`, `/staff/outreach`, `/staff/who` (live
 roll-call view), `/staff/admin` (dashboard, gated to `role IN ('admin',
 'manager')`), `/staff/admin/users` (add/edit/deactivate/delete staff,
-gated to `role = 'admin'`).
+gated to `role = 'admin'`), `/staff/privacy` (what's recorded and why —
+linked from every form that collects a name/location/timestamp).
+
+**Not a public site:** `public/robots.txt` disallows crawling entirely, and
+there's no analytics on either app — the Staff Portal specifically records
+real attendance/lone-working data (who's physically on site, working from
+home, or on outreach), which isn't something to route through a third-party
+analytics tool without a clear lawful basis. If you do want analytics on
+the Room Booking side only, add it there deliberately rather than globally.
 
 **User management:** `/staff/admin/users` is the "add users" feature —
 each user has a name, email, site, role (`staff`/`manager`/`admin`), and

@@ -10,8 +10,10 @@ import { useState } from "react";
 import { CGL } from "../../data/rooms.js";
 import { inp, lbl } from "../../styles/shared.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
+import { useDocumentTitle } from "../lib/useDocumentTitle.js";
 
 function EmailGate({ storageKey, allow, title, subtitle, children }) {
+  useDocumentTitle(title);
   const { users, loading } = useStaffUsers();
   const [email, setEmail] = useState(() => {
     try { return sessionStorage.getItem(storageKey) || ""; } catch { return ""; }

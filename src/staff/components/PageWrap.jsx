@@ -1,8 +1,10 @@
 // Consistent page container + heading for staff-portal pages.
 import { Link } from "react-router-dom";
 import { CGL } from "../../data/rooms.js";
+import { useDocumentTitle } from "../lib/useDocumentTitle.js";
 
 function PageWrap({ title, subtitle, backTo = "/staff", maxWidth = 640, children }) {
+  useDocumentTitle(title);
   return (
     <div style={{ flex: 1, padding: "22px 20px", maxWidth, width: "100%", margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
