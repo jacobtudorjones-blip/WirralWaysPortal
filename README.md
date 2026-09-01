@@ -1,20 +1,25 @@
 # Wirral Ways Portal
 
-Two apps, one Vite + React project, one deploy:
+A portal hub plus two apps, one Vite + React project, one deploy:
 
-- **Room Booking** (`/`) — for CGL's Wirral Ways sites (Price Street,
+- **Landing** (`/`) — pick a section: Room Booking or Staff Portal. More
+  sections are expected here in future.
+- **Room Booking** (`/rooms`) — for CGL's Wirral Ways sites (Price Street,
   Market Street, Argyle Street, Brighton Street). Staff identify themselves
   with a `@cgl.org.uk` email address, browse rooms, request bookings
-  (single, bulk, or recurring), and — for the small list of approvers
-  configured in `src/data/rooms.js` — approve/reject requests, check
-  people in, and view analytics and an audit log.
+  (single, bulk, or recurring), and — for approvers (configured in
+  `src/data/rooms.js`, or anyone with an `admin` role in the Staff Portal
+  directory) — approve/reject requests, check people in, and view
+  analytics and an audit log. Individual rooms have their own URL, e.g.
+  `/rooms/meadow-room` — shareable, bookmarkable, and what clicking a room
+  card takes you to.
 - **Staff Portal** (`/staff`) — sign in/out for health & safety and lone
   working, working-from-home and working-elsewhere tracking, outreach
   tracking, a live "who's in" roll-call view, and a staff directory with
-  user management (add staff, record their site/role/manager). See
-  [Staff Portal](#staff-portal) below.
+  user management (add staff — one at a time or in bulk — record their
+  site/role/manager). See [Staff Portal](#staff-portal) below.
 
-Both were originally single self-contained `index.html` files (React +
+Both apps were originally single self-contained `index.html` files (React +
 Babel / plain JS loaded from CDNs, no build step); this project converts
 them into one normal Vite + React project with real client-side routing,
 so it can be developed, linted, and built like any other JS project —
@@ -136,9 +141,14 @@ netlify/functions/
 supabase/
   staff-portal-schema.sql   Staff Portal tables + RLS policies — run once per Supabase project
 src/
-  main.jsx            React root — routes "/" to the Room Booking App, "/staff/*" to StaffApp
-  App.jsx             Room Booking: identity, tabs, data loading/saving
-  data/rooms.js        Brand palette, sites, approvers, room + layout data
+  main.jsx            React root — routes "/" to Landing, "/rooms/*" to the
+                       Room Booking App, "/staff/*" to StaffApp
+  pages/Landing.jsx    Portal hub — pick Room Booking or Staff Portal
+  App.jsx             Room Booking: identity, tabs, data loading/saving.
+                       Mounted at /rooms/*; parses a room slug from the URL
+                       for /rooms/:slug deep links (see CLAUDE.md)
+  data/rooms.js        Brand palette, sites, approvers, room + layout data,
+                        room slugs + ROOM_BY_SLUG for deep links
   lib/                 Framework-agnostic helpers, shared by both apps
     helpers.js          date/time formatting, recurrence, conflict checks
     storage.js           Supabase load/save (Room Booking's ww_bookings)
@@ -153,9 +163,9 @@ src/
   staff/               Staff Portal — see below
     StaffApp.jsx         route table, mounted at /staff/*
     components/          StaffLayout (header/nav/breadcrumbs), NamePicker,
-                          EmailGate, UserFormModal, StartFinishFlow (shared
-                          WFH/outreach/elsewhere UI), PageWrap, PrivacyNote,
-                          Breadcrumbs
+                          EmailGate, UserFormModal, BulkAddUsersModal,
+                          StartFinishFlow (shared WFH/outreach/elsewhere
+                          UI), PageWrap, PrivacyNote, Breadcrumbs
     pages/                Home, SignIn, SignOut, Wfh, Elsewhere, Outreach,
                            WhoIsIn, AdminDashboard, AdminUsers, PrivacyPolicy
     lib/                  useStaffUsers (directory hook), identity.js
@@ -203,7 +213,14 @@ each user has a name, email, site, role (`staff`/`manager`/`admin`), and
 an optional **manager**, picked from the same directory (a
 self-referencing link — `staff_users.manager_id → staff_users.id`), so the
 manager relationship is real data, not free text, and stays consistent as
-people are added.
+people are added. **Bulk add** (same page) accepts a pasted list — one
+person per line, `Name, email, site, role` (site/role optional, or paste a
+bare email and the name is derived automatically) — parsed and previewed
+before inserting; re-pasting an updated list upserts by email rather than
+erroring on duplicates. Manager isn't set in bulk — add people first, then
+set managers individually once everyone's in. Adding someone with the
+`admin` role here also makes them a Room Booking approver (see
+`IdentityScreen.jsx`) — one directory, both apps.
 
 **⚠️ Security model — no real authentication:** admin access and the
 "Who's in" gate check the entered email against `staff_users.role`

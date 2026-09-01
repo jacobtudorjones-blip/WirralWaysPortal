@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { CGL, APPROVERS, ROOMS, ROOM_LIST, SITES, SITE_COLOR } from "./data/rooms.js";
+import { useLocation, useNavigate } from "react-router-dom";
+import { CGL, APPROVERS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
 import { genId, norm, todayStr, nowStr, formatDate, formatDateShort, formatTime } from "./lib/helpers.js";
 import { slotToMins } from "./lib/slots.js";
 import { loadKey, saveKey } from "./lib/storage.js";
@@ -44,6 +45,33 @@ function App() {
   const [showBulkForm,setShowBulkForm] = useState(false);
   const [loginNotifs,setLoginNotifs] = useState(null);   // shown after data loads post-login
   const [pendingIdentity,setPendingIdentity] = useState(null); // identity waiting for bookings to load
+
+  // ── PER-ROOM URLS: mounted at /rooms/*, so /rooms/meadow-room should
+  // deep-link straight to that room (floorplans tab + activeRoom set), and
+  // navigating rooms within the app should keep the URL in sync the other
+  // way. Parsed manually rather than with a nested <Route path=":slug">,
+  // since App already returns one big tree rather than multiple routes.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const slugFromUrl = location.pathname.replace(/^\/rooms\/?/, "").split("/")[0] || null;
+
+  // URL → state: a room slug in the URL selects that room, whenever it changes.
+  useEffect(()=>{
+    if(!slugFromUrl) return;
+    const room = ROOM_BY_SLUG[slugFromUrl];
+    if(room){ setTab("floorplans"); setActiveRoom(room.id); }
+  },[slugFromUrl]);
+
+  // state → URL: keep /rooms/<slug> in sync while browsing floorplans,
+  // and fall back to plain /rooms everywhere else — replace (not push) so
+  // clicking through rooms doesn't spam the browser back button.
+  useEffect(()=>{
+    if(!user) return; // don't touch the URL before someone's identified
+    const desired = (tab==="floorplans" && activeRoom && ROOMS[activeRoom])
+      ? "/rooms/"+ROOMS[activeRoom].slug
+      : "/rooms";
+    if(location.pathname !== desired) navigate(desired, {replace:true});
+  },[tab, activeRoom, user]);
 
   // ── PAGE TITLE: keep the browser tab meaningful per tab, not stuck on
   // the static index.html title — helps when several tabs/bookmarks are open.
@@ -396,7 +424,11 @@ function App() {
       identity.isApprover ? identity.name + " signed in as approver" : identity.name + " opened the booking system",
       identity.name
     );
-    setTab(identity.isApprover?"approver":"home");
+    // A deep-linked room (from /rooms/:slug) takes priority over the usual
+    // post-login default tab, so a shared room link still lands there.
+    const deepLinkedRoom = slugFromUrl ? ROOM_BY_SLUG[slugFromUrl] : null;
+    if(deepLinkedRoom){ setTab("floorplans"); setActiveRoom(deepLinkedRoom.id); }
+    else setTab(identity.isApprover?"approver":"home");
     // If bookings are already loaded, process login now; otherwise queue for when they load
     if(bookings.length > 0) {
       _processLogin(identity, bookings);
@@ -477,6 +509,7 @@ function App() {
             <div style={{background:CGL.saffron,color:CGL.black,fontSize:10,fontWeight:800,padding:"3px 10px",borderRadius:20}}>{pending.length} to approve</div>
           )}
           <div style={{color:CGL.orchid,fontSize:11,fontWeight:600,marginRight:4,display:"none"}}>{user.name}</div>
+          <a href="/" style={{background:"rgba(255,255,255,0.1)",color:CGL.white,border:"1px solid rgba(255,255,255,0.2)",borderRadius:7,padding:"5px 12px",fontSize:11,fontWeight:700,fontFamily:"inherit",textDecoration:"none"}}>🏠 Portal</a>
           <a href="/staff" style={{background:(CGL.lavender)+"30",color:CGL.white,border:"1px solid "+(CGL.lavender)+"40",borderRadius:7,padding:"5px 12px",fontSize:11,fontWeight:700,fontFamily:"inherit",textDecoration:"none"}}>Staff Portal →</a>
           <button onClick={()=>setShowHelp(true)} style={{background:(CGL.lavender)+"30",color:CGL.white,border:"1px solid "+(CGL.lavender)+"40",borderRadius:7,padding:"5px 12px",fontSize:11,cursor:"pointer",fontWeight:700,fontFamily:"inherit"}}>Help ?</button>
           <button onClick={handleSignOut} style={{background:(CGL.neon)+"20",color:CGL.white,border:"1px solid "+(CGL.neon)+"40",borderRadius:7,padding:"5px 12px",fontSize:11,cursor:"pointer",fontWeight:700,fontFamily:"inherit"}}>Sign out</button>
@@ -519,7 +552,7 @@ function App() {
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12}}>
                   {rooms.map(room=>(
-                    <RoomInfoCard key={room.id} room={room} onRequest={()=>{setPreRoom(room.id);setShowForm(true);}}/>
+                    <RoomInfoCard key={room.id} room={room} onRequest={()=>{setPreRoom(room.id);setShowForm(true);}} onView={()=>navigate("/rooms/"+room.slug)}/>
                   ))}
                 </div>
               </div>

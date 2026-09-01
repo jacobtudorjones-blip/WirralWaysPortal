@@ -5,6 +5,7 @@ import { CGL } from "../../data/rooms.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import EmailGate from "../components/EmailGate.jsx";
 import UserFormModal from "../components/UserFormModal.jsx";
+import BulkAddUsersModal from "../components/BulkAddUsersModal.jsx";
 import PageWrap from "../components/PageWrap.jsx";
 
 function AdminUsers() {
@@ -21,8 +22,9 @@ function AdminUsers() {
 }
 
 function UsersBody() {
-  const { users, loading, error, addUser, editUser, removeUser, managerName } = useStaffUsers();
+  const { users, loading, error, addUser, editUser, removeUser, bulkAddUsers, managerName } = useStaffUsers();
   const [modal, setModal] = useState(null); // "new" | user object | null
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [search, setSearch] = useState("");
 
@@ -30,6 +32,10 @@ function UsersBody() {
     if (modal === "new") await addUser({ ...fields, active: true });
     else await editUser(modal.id, fields);
     setModal(null);
+  }
+  async function handleBulkSave(rows) {
+    await bulkAddUsers(rows);
+    setBulkOpen(false);
   }
 
   const filtered = users.filter(u =>
@@ -47,9 +53,14 @@ function UsersBody() {
           onChange={e => setSearch(e.target.value)}
           style={{ padding: "8px 12px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, width: 240 }}
         />
-        <button onClick={() => setModal("new")} style={{ background: CGL.blackcurrant, color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontWeight: 700, cursor: "pointer" }}>
-          + Add user
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setBulkOpen(true)} style={{ background: "#fff", color: CGL.blackcurrant, border: "1.5px solid " + CGL.blackcurrant, borderRadius: 10, padding: "10px 16px", fontWeight: 700, cursor: "pointer" }}>
+            ⇈ Bulk add
+          </button>
+          <button onClick={() => setModal("new")} style={{ background: CGL.blackcurrant, color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontWeight: 700, cursor: "pointer" }}>
+            + Add user
+          </button>
+        </div>
       </div>
 
       {error && <div style={{ color: CGL.neon, fontSize: 13, marginBottom: 12 }}>{error}</div>}
@@ -101,6 +112,10 @@ function UsersBody() {
           onSave={handleSave}
           onClose={() => setModal(null)}
         />
+      )}
+
+      {bulkOpen && (
+        <BulkAddUsersModal onSave={handleBulkSave} onClose={() => setBulkOpen(false)} />
       )}
 
       {confirmDelete && (

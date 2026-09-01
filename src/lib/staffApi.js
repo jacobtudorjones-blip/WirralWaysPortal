@@ -42,6 +42,18 @@ async function insertRow(table, row) {
   const rows = await request(table, { method: "POST", body: JSON.stringify(row) });
   return rows[0];
 }
+// Bulk insert (PostgREST accepts an array body as a single request). Pass
+// onConflict (a column name, e.g. "email") to upsert instead of erroring
+// on duplicates — used by the Staff Portal's bulk-add-users feature so
+// re-pasting a list updates existing people instead of failing the batch.
+async function insertRows(table, rows, { onConflict } = {}) {
+  const qs = onConflict ? "?on_conflict=" + encodeURIComponent(onConflict) : "";
+  return request(table + qs, {
+    method: "POST",
+    body: JSON.stringify(rows),
+    prefer: onConflict ? "resolution=merge-duplicates,return=representation" : "return=representation",
+  });
+}
 async function updateRow(table, id, patch) {
   const rows = await request(table + "?id=eq." + encodeURIComponent(id), {
     method: "PATCH",
@@ -53,4 +65,4 @@ async function deleteRow(table, id) {
   return request(table + "?id=eq." + encodeURIComponent(id), { method: "DELETE" });
 }
 
-export { listRows, insertRow, updateRow, deleteRow };
+export { listRows, insertRow, insertRows, updateRow, deleteRow };

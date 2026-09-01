@@ -2,7 +2,7 @@
 // Used by the name pickers on every sign-in/out screen and by the User
 // Management admin page.
 import { useState, useEffect, useCallback } from "react";
-import { listRows, insertRow, updateRow, deleteRow } from "../../lib/staffApi.js";
+import { listRows, insertRow, insertRows, updateRow, deleteRow } from "../../lib/staffApi.js";
 
 function useStaffUsers() {
   const [users, setUsers] = useState([]);
@@ -39,6 +39,13 @@ function useStaffUsers() {
     await deleteRow("staff_users", id);
     await refresh();
   }
+  // Mass-add: upserts by email, so re-pasting a list updates existing
+  // people (e.g. a role/manager change) instead of erroring on duplicates.
+  async function bulkAddUsers(rows) {
+    const created = await insertRows("staff_users", rows, { onConflict: "email" });
+    await refresh();
+    return created;
+  }
 
   const activeUsers = users.filter(u => u.active !== false);
   const managerName = id => {
@@ -46,7 +53,7 @@ function useStaffUsers() {
     return m ? m.name : "";
   };
 
-  return { users, activeUsers, loading, error, refresh, addUser, editUser, removeUser, managerName };
+  return { users, activeUsers, loading, error, refresh, addUser, editUser, removeUser, bulkAddUsers, managerName };
 }
 
 export { useStaffUsers };

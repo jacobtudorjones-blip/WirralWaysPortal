@@ -1,5 +1,6 @@
 // CGL brand palette, site colours, approvers list, and room/layout data
 // extracted from the original single-file app.
+import { slugify } from "../lib/helpers.js";
 
 const CGL = {
   blackcurrant: "#5e1b6d",
@@ -117,6 +118,7 @@ const LAYOUT_MAP = { detailed_crag: PS_LAYOUTS.detailed_crag };
 const ROOMS = Object.fromEntries(
   RAW_ROOMS.map(r => [r.id, {
     ...r,
+    slug: slugify(r.name),
     color: SITE_COLOR[r.site] || CGL.blackcurrant,
     layout: (r.layout && LAYOUT_MAP[r.layout]) || genericLayout(typeof r.capacity === "number" ? r.capacity : 4),
     isPlaceholder: !(r.layout && LAYOUT_MAP[r.layout]),
@@ -125,4 +127,8 @@ const ROOMS = Object.fromEntries(
 const ROOM_LIST = Object.values(ROOMS);
 const SITES = ["Price Street","Market Street","Argyle Street","Brighton Street"];
 
-export { CGL, SITE_COLOR, APPROVERS, ROOMS, ROOM_LIST, SITES };
+// Reverse lookup for /rooms/:slug deep links (see App.jsx). Room names are
+// unique in practice; if two ever collide the later one in RAW_ROOMS wins.
+const ROOM_BY_SLUG = Object.fromEntries(ROOM_LIST.map(r => [r.slug, r]));
+
+export { CGL, SITE_COLOR, APPROVERS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES };

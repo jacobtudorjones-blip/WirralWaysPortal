@@ -43,7 +43,8 @@ function StaffLayout() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <LiveClock />
-          <a href="/" style={{ fontSize: 12, color: "#fff", opacity: 0.85 }}>Room Booking →</a>
+          <a href="/" style={{ fontSize: 12, color: "#fff", opacity: 0.7 }}>🏠 Portal</a>
+          <a href="/rooms" style={{ fontSize: 12, color: "#fff", opacity: 0.85 }}>Room Booking →</a>
         </div>
       </header>
       <Breadcrumbs />

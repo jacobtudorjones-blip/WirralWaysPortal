@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { CGL } from "../data/rooms.js";
 
-function RoomInfoCard({ room, onRequest }) {
+function RoomInfoCard({ room, onRequest, onView }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div style={{background:"white",borderRadius:12,border:"1.5px solid "+(CGL.lavender),borderTop:"4px solid "+(room.color),overflow:"hidden",boxShadow:"0 2px 8px rgba(94,27,109,0.06)",transition:"box-shadow 0.2s"}}
+    <div style={{background:"white",borderRadius:12,border:"1.5px solid "+(CGL.lavender),borderTop:"4px solid "+(room.color),overflow:"hidden",boxShadow:"0 2px 8px rgba(94,27,109,0.06)",transition:"box-shadow 0.2s",cursor:onView?"pointer":"default"}}
+      onClick={onView}
       onMouseOver={e=>e.currentTarget.style.boxShadow="0 6px 20px rgba(94,27,109,0.12)"}
       onMouseOut={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(94,27,109,0.06)"}>
       <div style={{padding:"14px 16px"}}>
@@ -30,7 +31,7 @@ function RoomInfoCard({ room, onRequest }) {
         </div>
 
         {/* Expandable detail */}
-        <button onClick={()=>setExpanded(e=>!e)} style={{background:"none",border:"none",color:room.color,fontSize:11,fontWeight:700,cursor:"pointer",padding:0,marginBottom:expanded?8:0,fontFamily:"inherit"}}>
+        <button onClick={e=>{e.stopPropagation();setExpanded(x=>!x);}} style={{background:"none",border:"none",color:room.color,fontSize:11,fontWeight:700,cursor:"pointer",padding:0,marginBottom:expanded?8:0,fontFamily:"inherit"}}>
           {expanded?"▲ Less info":"▼ More info"}
         </button>
 
@@ -44,7 +45,7 @@ function RoomInfoCard({ room, onRequest }) {
           </div>
         )}
 
-        <button onClick={onRequest} style={{width:"100%",background:"linear-gradient(135deg, "+(room.color)+", "+(room.color)+"cc)",color:"white",border:"none",borderRadius:8,padding:"9px 0",fontSize:12,fontWeight:800,cursor:"pointer",letterSpacing:0.3,transition:"opacity 0.15s",fontFamily:"'Nunito',system-ui,sans-serif"}}
+        <button onClick={e=>{e.stopPropagation();onRequest();}} style={{width:"100%",background:"linear-gradient(135deg, "+(room.color)+", "+(room.color)+"cc)",color:"white",border:"none",borderRadius:8,padding:"9px 0",fontSize:12,fontWeight:800,cursor:"pointer",letterSpacing:0.3,transition:"opacity 0.15s",fontFamily:"'Nunito',system-ui,sans-serif"}}
           onMouseOver={e=>e.target.style.opacity="0.85"} onMouseOut={e=>e.target.style.opacity="1"}>
           Request this room
         </button>

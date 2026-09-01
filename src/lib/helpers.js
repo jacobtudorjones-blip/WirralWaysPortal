@@ -4,6 +4,9 @@ const genId    = () => Math.random().toString(36).slice(2,10);
 const todayStr = () => new Date().toISOString().slice(0,10);
 const nowStr   = () => new Date().toISOString();
 const norm     = s  => (s||"").trim().toLowerCase();
+// URL-friendly slug for a room name, e.g. "Meadow Room" -> "meadow-room".
+// Used for /rooms/:slug deep links — see data/rooms.js's ROOM_BY_SLUG.
+const slugify  = s  => (s||"").toString().trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
 
 function formatDate(d) {
   if (!d) return "";
@@ -82,7 +85,7 @@ function hasConflict(bookings,roomId,date,startTime,endTime,excludeId=null) {
 }
 
 export {
-  genId, todayStr, nowStr, norm,
+  genId, todayStr, nowStr, norm, slugify,
   formatDate, formatDateShort, formatTime, formatDateTime,
   getNthWeekdayOfMonth, getRecurrenceDates, hasConflict,
 };

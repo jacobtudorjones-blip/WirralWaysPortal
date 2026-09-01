@@ -2,19 +2,35 @@ import { useState } from "react";
 import { CGL, APPROVERS } from "../data/rooms.js";
 import { norm } from "../lib/helpers.js";
 import { nameFromEmail } from "../lib/nameFromEmail.js";
+import { listRows } from "../lib/staffApi.js";
 import { inp, lbl } from "../styles/shared.js";
 
 function IdentityScreen({ onIdentify }) {
   const [email, setEmail] = useState("");
   const [err,   setErr]   = useState("");
+  const [checking, setChecking] = useState(false);
 
-  function proceed() {
+  async function proceed() {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) { setErr("Please enter your work email address."); return; }
     if (!trimmed.endsWith("@cgl.org.uk")) { setErr("Please use your CGL email address — it should end in @cgl.org.uk."); return; }
     if (!/^[^\s@]+@cgl\.org\.uk$/.test(trimmed)) { setErr("That doesn't look like a valid CGL email address."); return; }
     const parsedName = nameFromEmail(trimmed);
-    const isApprover = APPROVERS.some(a => norm(a.email) === norm(trimmed));
+    let isApprover = APPROVERS.some(a => norm(a.email) === norm(trimmed));
+    // Also check the Staff Portal directory (staff_users, role='admin') —
+    // so admins added there (including via bulk-add) get approver rights
+    // here too, without needing a separate edit to the hardcoded list
+    // above. Additive only, and fails silently to APPROVERS-only if the
+    // staff_users table doesn't exist yet or Supabase is unreachable —
+    // this must never block someone from continuing to the app.
+    if (!isApprover) {
+      setChecking(true);
+      try {
+        const rows = await listRows("staff_users", "?select=role&email=eq."+encodeURIComponent(trimmed)+"&active=is.true");
+        if (rows[0]?.role === "admin") isApprover = true;
+      } catch (e) { console.error("Staff directory approver check failed (falling back to APPROVERS only)", e); }
+      setChecking(false);
+    }
     onIdentify({ name: parsedName, email: trimmed, isApprover });
   }
 
@@ -70,9 +86,9 @@ function IdentityScreen({ onIdentify }) {
             </div>
           )}
 
-          <button onClick={proceed} style={{width:"100%",background:"linear-gradient(135deg, "+(CGL.blackcurrant)+", "+(CGL.amethyst)+")",color:CGL.white,border:"none",borderRadius:10,padding:"14px 0",fontSize:15,fontWeight:800,cursor:"pointer",letterSpacing:0.3,transition:"opacity 0.2s"}}
-            onMouseOver={e=>e.target.style.opacity="0.9"} onMouseOut={e=>e.target.style.opacity="1"}>
-            Continue →
+          <button onClick={proceed} disabled={checking} style={{width:"100%",background:"linear-gradient(135deg, "+(CGL.blackcurrant)+", "+(CGL.amethyst)+")",color:CGL.white,border:"none",borderRadius:10,padding:"14px 0",fontSize:15,fontWeight:800,cursor:checking?"default":"pointer",letterSpacing:0.3,transition:"opacity 0.2s",opacity:checking?0.7:1}}
+            onMouseOver={e=>{if(!checking)e.target.style.opacity="0.9";}} onMouseOut={e=>{if(!checking)e.target.style.opacity="1";}}>
+            {checking?"Checking…":"Continue →"}
           </button>
           <div style={{textAlign:"center",fontSize:12,color:"#999",marginTop:16}}>Your email is used only to manage your bookings.</div>
         </div>
