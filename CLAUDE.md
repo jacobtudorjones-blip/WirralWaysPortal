@@ -20,8 +20,11 @@ README.md for the full picture):
   same architecture as Room Booking, no server of its own.
 
 Routing lives in `src/main.jsx`: `/staff/*` mounts `StaffApp`, everything
-else mounts the Room Booking `App`. `public/_redirects` sends all paths to
-`index.html` so client-side routing works on Netlify.
+else mounts the Room Booking `App`. Client-side routing needs a
+server-side fallback to `index.html` for every path — `public/_redirects`
+does that on Netlify, `public/.htaccess` does the same on Apache hosts
+(one.com). Both get copied into `dist/` by the build; keep both in sync
+if the routing rule ever changes, since only one applies per host.
 
 ## Commands
 

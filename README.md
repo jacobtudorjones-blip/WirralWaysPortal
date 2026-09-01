@@ -42,10 +42,51 @@ npm run dev
 ```
 
 Open the printed local URL. `npm run build` produces a static `dist/`
-folder you can deploy anywhere (Netlify, Cloudflare Pages, S3, etc.) — there
-is no server-side component. `public/_redirects` sends every path to
-`index.html` so client-side routing (the Staff Portal's `/staff/*` routes)
-works after a hard refresh or a direct link, not just in-app navigation.
+folder you can deploy anywhere — there is no server-side component. Two
+files handle the client-side routing fallback (so `/staff/admin/users`
+etc. work on a hard refresh or a direct link, not just in-app navigation)
+depending on the host:
+- `public/_redirects` — Netlify.
+- `public/.htaccess` — any Apache host (this is what one.com's web
+  hosting uses; see [Deploying to one.com](#deploying-to-onecom) below).
+
+Both just get copied into `dist/` as-is by the build; only the one that
+matches your host actually does anything.
+
+## Deploying to one.com
+
+one.com's web hosting is classic Apache shared hosting — files uploaded
+over FTP/SFTP or their File Manager, no git connection, no build step on
+their end, and no server-side environment variable UI (unlike Netlify).
+That changes the workflow slightly:
+
+1. **Build locally with real values** — env vars are baked into the JS at
+   build time, so you can't set them on the host afterwards:
+   ```bash
+   npm install
+   cp .env.example .env.local   # fill in real Supabase/Brevo values
+   npm run build
+   ```
+2. **Upload the contents of `dist/`** (not the folder itself — its
+   *contents*) to your one.com webspace root for the (sub)domain you're
+   using, e.g. `public_html/` or `public_html/staff/` for a subdomain.
+   Use one.com's File Manager or an FTP/SFTP client (FileZilla, etc.) —
+   credentials are in your one.com control panel under the site's FTP
+   settings.
+3. **Make sure `.htaccess` uploads too** — it starts with a dot, so some
+   FTP clients hide it by default ("show hidden files" in the client's
+   settings). Without it, anything under `/staff/*` will 404 on refresh.
+4. **Re-deploy on every change** by repeating steps 1–2 — there's no
+   auto-deploy from GitHub the way Netlify does it. If that manual step
+   becomes a hassle, a GitHub Action that builds and pushes to one.com
+   over SFTP on every push to `main` is a common way to automate it —
+   ask if you want that set up.
+
+One-time setup on the host side: create the (sub)domain in your one.com
+control panel first (e.g. a `staff.` subdomain pointing at its own
+folder, if you want Room Booking and the Staff Portal on separate
+subdomains rather than `/` and `/staff` on the same one — either works,
+since routing is all client-side).
 
 ## Environment variables
 

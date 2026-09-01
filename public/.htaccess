@@ -1,0 +1,18 @@
+# SPA fallback for client-side routing (react-router-dom / BrowserRouter),
+# for classic Apache hosts (e.g. one.com web hosting) that don't read
+# public/_redirects (that file is Netlify-specific — this is its Apache
+# equivalent, doing the same job: any path that isn't a real file on disk
+# falls back to index.html so /staff/admin/users etc. work on a hard
+# refresh or a direct link, not just in-app navigation).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Real files/directories (JS/CSS/images, robots.txt, etc.) are served as-is.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Everything else goes through index.html; React Router takes it from there.
+  RewriteRule ^ index.html [L]
+</IfModule>
