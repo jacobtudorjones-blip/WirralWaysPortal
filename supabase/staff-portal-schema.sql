@@ -116,8 +116,9 @@ create policy staff_elsewhere_anon_all on staff_elsewhere for all to anon using 
 create policy staff_outreach_anon_all  on staff_outreach  for all to anon using (true) with check (true);
 
 -- ── SEED YOUR FIRST ADMIN ─────────────────────────────────────────────────
--- Uncomment and edit before running, or add yourself from the app once at
--- least one admin exists — this is the "add users" chicken-and-egg step.
+-- Uncomment and run (edit name/email first if this isn't you) — this is
+-- the "add users" chicken-and-egg step: you need one admin before anyone
+-- can use /staff/admin/users to add everyone else.
 -- insert into staff_users (name, email, role, active)
--- values ('Your Name', 'you@cgl.org.uk', 'admin', true)
+-- values ('Jacob Jones', 'jacob.jones2@cgl.org.uk', 'admin', true)
 -- on conflict (email) do update set role = 'admin';

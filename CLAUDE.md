@@ -8,9 +8,10 @@ Two apps sharing one Vite + React 18 project and one deploy (see
 README.md for the full picture):
 
 - **Room Booking** (`/`, `src/App.jsx` + `src/components/`) — the
-  original app. No backend of its own: Supabase (REST) is used as a JSON
-  key/value store, Brevo sends email, both called directly from the
-  browser.
+  original app. No backend of its own for data: Supabase (REST) is used as
+  a JSON key/value store, called directly from the browser. Email is the
+  one exception — it goes through `netlify/functions/send-email.js` (see
+  below), not called directly from the browser.
 - **Staff Portal** (`/staff/*`, `src/staff/`) — sign in/out, WFH,
   outreach and "working elsewhere" tracking, a live "who's in" roll-call
   view, and staff directory / user management (name, email, site, role,
@@ -62,10 +63,15 @@ plain JS (not TypeScript) project with no test suite yet.
 - `APPROVERS` in `src/data/rooms.js` is the full authorization model for
   approving bookings — it's just an email allowlist, no real auth. Adding
   someone means adding their email there.
-- The Brevo API key is exposed client-side (see the security note in
-  README.md). Don't "fix" this by moving it to a `.env` alone — that only
-  keeps it out of git, not out of the shipped bundle. A real fix needs a
-  server-side proxy.
+- The Brevo API key is server-side only now: `netlify/functions/send-email.js`
+  holds it (`process.env.BREVO_API_KEY`, deliberately not `VITE_`-prefixed)
+  and is the only thing that calls Brevo; `src/lib/email.js` just POSTs to
+  `/.netlify/functions/send-email`. Don't reintroduce `VITE_BREVO_API_KEY`
+  or call Brevo directly from client code — that's the exact issue this
+  fixed. This only works on Netlify (functions need a host that runs them);
+  if the frontend ever moves to static-only hosting (one.com), this needs
+  to move to something that still executes it (a Supabase Edge Function is
+  the natural alternative).
 - `hasConflict` (src/lib/helpers.js) only treats `status === "confirmed"`
   bookings as blocking — pending/cancelled/auto-released bookings are
   intentionally not conflict sources.

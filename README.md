@@ -95,23 +95,35 @@ them into the client bundle at build time:
 
 | Variable | Purpose |
 |---|---|
-| `VITE_SUPABASE_URL` | Supabase project URL — used by both apps |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key — protected by RLS, used by both apps |
-| `VITE_BREVO_API_KEY` | Brevo API key used to send booking/waitlist emails (Room Booking only) |
+| `VITE_SUPABASE_URL` | Supabase project URL — used by both apps, client-side |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key — protected by RLS, used by both apps, client-side |
+| `BREVO_API_KEY` | Brevo API key — **not** `VITE_`-prefixed; read server-side only, by `netlify/functions/send-email.js` |
 
 Both apps can share the same Supabase project (cheapest option — one
 free-tier project) since their tables use different name prefixes
 (`ww_` vs `staff_`), or you can point them at separate projects by editing
 the values per-environment.
 
-**⚠️ Known security issue, carried over from the original app:** the Brevo
-API key is called directly from the browser (`src/lib/email.js`), so it
-ships inside the built JS bundle and is extractable by anyone who opens dev
-tools on the deployed site — not just kept out of git. A leaked key could be
-used to send email as `rooms@wirralways.org.uk`. Before relying on this in
-production, put email-sending behind a small server-side function (a
-Supabase Edge Function or similar) that holds the Brevo key server-side
-instead of shipping it to the browser.
+**Brevo key: fixed, not just documented.** This used to be a known issue
+(the key called directly from the browser, extractable via dev tools) —
+it's now proxied through `netlify/functions/send-email.js`, a Netlify
+Function that holds `BREVO_API_KEY` server-side and is the only thing that
+ever talks to Brevo. `src/lib/email.js` just POSTs to
+`/.netlify/functions/send-email`. Set `BREVO_API_KEY` in Netlify's site
+environment variables (Site configuration → Environment variables), not in
+a client `.env` — it must never end up `VITE_`-prefixed. This only works
+because Netlify runs the function; a static-only host (one.com) can't, so
+if the frontend ever moves there, this function needs to move to something
+that still executes it (a Supabase Edge Function is the natural
+host-agnostic alternative).
+
+**Still open, not fixed by the above:** admin/approver access on both apps
+(`APPROVERS` in `src/data/rooms.js`, `role` on `staff_users`) is still a
+client-side email check, not real authentication — seeing the check pass
+doesn't stop someone from calling the Supabase REST API directly with the
+anon key. Fixing that properly needs real user auth (Supabase Auth) with
+RLS keyed on `auth.uid()`, which is a bigger change than this — flagged
+here rather than silently left out.
 
 ## Project structure
 
@@ -119,6 +131,8 @@ instead of shipping it to the browser.
 index.html            Vite entry HTML
 public/_redirects     Netlify SPA fallback (all paths → index.html)
 public/robots.txt     Disallows all crawling — internal tool, not meant to be indexed
+netlify/functions/
+  send-email.js        Brevo proxy — holds BREVO_API_KEY server-side, called from src/lib/email.js
 supabase/
   staff-portal-schema.sql   Staff Portal tables + RLS policies — run once per Supabase project
 src/
