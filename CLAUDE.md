@@ -143,7 +143,19 @@ plain JS (not TypeScript) project with no test suite yet.
   A "confirmed" email also carries a `.ics` attachment
   (`icsAttachment()` in App.jsx, built from `lib/ics.js`'s `buildICS()` —
   the same function the "📅 .ics" download button uses). Don't reintroduce
-  `simulateEmail` in the booking flow.
+  `simulateEmail` in the booking flow. When a booking is made on someone
+  else's behalf (`BookingForm.jsx`'s "I'm booking this for someone else"
+  — `booking.email`/`bookedBy` end up being the other person, while
+  `booking.requestedByEmail`/`requestedBy` stay the actual submitter),
+  `buildEmail`'s `recipientsFor()` sends the request/confirmed/rejected/
+  reminder emails to **both** as one comma-separated `to` (same pattern
+  the approver notification already used for multiple recipients) —
+  don't go back to `to: booking.email` alone, that was a real gap
+  (whoever booked on someone else's behalf never heard anything back).
+  The approver-notify email also names the real requester
+  (`requestedBy`/`requestedByEmail`), with a separate "Booked for" line
+  when it's not the same person — it used to show `bookedBy` as
+  "Requested by", which is wrong in exactly this case.
 - `netlify/functions/manager-report.js` is a *scheduled* function
   (`netlify.toml`'s cron is `*/15 8-10 * * *` — restricted to 8-10am UTC,
   not all day, to avoid burning a function invocation every 15 minutes

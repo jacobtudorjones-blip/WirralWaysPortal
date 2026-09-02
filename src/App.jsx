@@ -225,31 +225,46 @@ function App() {
     return { name: "booking.ics", content: btoa(unescape(encodeURIComponent(ics))) };
   }
 
+  // When a booking was made on someone else's behalf (bookingForOther),
+  // booking.email is the person the room is for and booking.requestedByEmail
+  // is whoever actually submitted it — both should hear about it, not just
+  // whoever the booking is for. Same comma-separated multi-recipient `to`
+  // pattern the approver notification already uses.
+  function recipientsFor(booking) {
+    if (!booking.bookedForOther || !booking.requestedByEmail) return booking.email;
+    return norm(booking.requestedByEmail) === norm(booking.email)
+      ? booking.email
+      : booking.email + "," + booking.requestedByEmail;
+  }
+
   function buildEmail(type, booking) {
     const room = ROOMS[booking.roomId];
     const detail = "Room: " + room.name + " (" + room.site + ")\nDate: " + formatDate(booking.date) + "\nTime: " + formatTime(booking.startTime) + " – " + formatTime(booking.endTime) + "\nPurpose: " + booking.title;
     if(type==="requested") return {
-      to: booking.email, type,
+      to: recipientsFor(booking), type,
       subject: "Room request received — " + room.name + ", " + formatDateShort(booking.date) + "",
       body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nYour request to book a room at Wirral Ways has been received. An approver will review it shortly and you'll get a confirmation email once it's been approved or if there's a problem.\n\n" + detail + "\n\nIf you need to make any changes, please get in touch.\n\nWirral Ways Room Booking\nrooms.wirralways.org.uk",
     };
     if(type==="confirmed") return {
-      to: booking.email, type,
+      to: recipientsFor(booking), type,
       subject: "Booking confirmed — " + room.name + ", " + formatDateShort(booking.date) + "",
       body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nGreat news — your room booking has been confirmed.\n\n" + detail + "\n\nPlease remember to check in when you arrive. If you need to cancel, you can do that at rooms.wirralways.org.uk.\n\nWirral Ways Room Booking",
     };
     if(type==="rejected") return {
-      to: booking.email, type,
+      to: recipientsFor(booking), type,
       subject: "Booking update — " + room.name + ", " + formatDateShort(booking.date) + "",
       body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nUnfortunately your room request could not be approved." + (booking.rejectionNote ? "\n\nReason: " + booking.rejectionNote : "") + "\n\n" + detail + "\n\nIf you have any questions, please get in touch with the team.\n\nWirral Ways Room Booking",
     };
     if(type==="approver_notify") return {
       to: APPROVERS.map(a=>a.email).join(", "), type: "requested",
       subject: "New room request — " + room.name + ", " + formatDateShort(booking.date) + "",
-      body: "Hi,\n\nA new room booking request has been submitted at Wirral Ways and needs your approval.\n\n" + detail + "\nRequested by: " + booking.bookedBy + " (" + booking.email + ")\n\nPlease log in to rooms.wirralways.org.uk to approve or reject this request.\n\nWirral Ways Room Booking",
+      // requestedBy/requestedByEmail is whoever submitted it, which isn't
+      // always the same as bookedBy/email (see bookingForOther) — approvers
+      // should see who actually made the request, not just who it's for.
+      body: "Hi,\n\nA new room booking request has been submitted at Wirral Ways and needs your approval.\n\n" + detail + "\nRequested by: " + booking.requestedBy + " (" + booking.requestedByEmail + ")" + (booking.bookedForOther ? "\nBooked for: " + booking.bookedBy + " (" + booking.email + ")" : "") + "\n\nPlease log in to rooms.wirralways.org.uk to approve or reject this request.\n\nWirral Ways Room Booking",
     };
     if(type==="reminder") return {
-      to: booking.email, type: "confirmed",
+      to: recipientsFor(booking), type: "confirmed",
       subject: "Reminder: " + room.name + " tomorrow — " + formatDateShort(booking.date) + "",
       body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nJust a reminder that you have a room booking tomorrow.\n\n" + detail + (booking.notes ? "\n\nRequirements noted: " + booking.notes : "") + "\n\nPlease remember to check in when you arrive. You can do this from rooms.wirralways.org.uk.\n\nWirral Ways Room Booking",
     };
