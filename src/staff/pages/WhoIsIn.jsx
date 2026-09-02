@@ -15,7 +15,7 @@ import { formatDate } from "../../lib/helpers.js";
 import { initials } from "../lib/format.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { useLeave } from "../lib/useLeave.js";
-import PinGate from "../components/PinGate.jsx";
+import PinGate from "../../components/PinGate.jsx";
 import PageWrap from "../components/PageWrap.jsx";
 
 function isOverdue(entry) {
@@ -74,7 +74,7 @@ function PersonRow({ name, meta, overdue }) {
 
 function WhoIsIn() {
   return (
-    <PinGate storageKey="ww_staff_who_pin" title="Who's in" subtitle="Enter the access code to view live status.">
+    <PinGate storageKey="ww_staff_who_pin" pin="886" title="Who's in" subtitle="Enter the access code to view live status.">
       <WhoIsInBody />
     </PinGate>
   );

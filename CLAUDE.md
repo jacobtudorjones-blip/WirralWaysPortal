@@ -81,6 +81,16 @@ plain JS (not TypeScript) project with no test suite yet.
 
 ## Things worth knowing before changing behaviour
 
+- **Room Booking is currently PIN-locked for testing** — `main.jsx`'s
+  `RoomsLock` wraps `<App />` on the `/rooms/*` route in a `PinGate`
+  (code `1335`) showing "In testing mode — coming soon. To book a room,
+  please contact wirral.services@cgl.org.uk." until unlocked; once
+  unlocked in a tab it stays unlocked for that session (sessionStorage,
+  key `ww_rooms_testing_pin`). This is deliberately temporary and lives
+  entirely in `main.jsx`, not inside `App.jsx` — nothing about
+  `IdentityScreen.jsx`/APPROVERS changed. To reopen Room Booking properly,
+  delete `RoomsLock` and change the `/rooms/*` route back to
+  `element={<App />}`.
 - `APPROVERS` in `src/data/rooms.js` is the full authorization model for
   approving bookings — it's just an email allowlist, no real auth. Adding
   someone means adding their email there.
@@ -172,10 +182,14 @@ plain JS (not TypeScript) project with no test suite yet.
   self-registered) also fires `sendSignInAck` — both live in
   `src/staff/lib/notify.js`, wired into `SignIn.jsx` and
   `StartFinishFlow.jsx`'s `submitStart`.
-- `/staff/who` (WhoIsIn.jsx) is **PIN-gated** (`PinGate.jsx`, code `886`),
-  not email-gated like the rest of the portal — matches the original
-  single-file app's design. It also deliberately never shows sign-in/start
-  times — presence only. Times are admin-dashboard-only
+- `/staff/who` (WhoIsIn.jsx) is **PIN-gated** (`src/components/PinGate.jsx`,
+  code `886`), not email-gated like the rest of the portal — matches the
+  original single-file app's design. `PinGate` is shared (top-level
+  `src/components/`, not staff-specific) and takes `pin` as a prop, since
+  Room Booking's testing lock (below) reuses it with a different code —
+  don't hardcode a single PIN back into the component. It also
+  deliberately never shows sign-in/start times — presence only. Times are
+  admin-dashboard-only
   (AdminDashboard.jsx's log table). The one exception is outreach's "back
   by" (expected_return) — that's not when someone started, it's when
   they're due back, kept for lone-working safety since the overdue flag

@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import Landing from "./pages/Landing.jsx";
+import PinGate from "./components/PinGate.jsx";
 
 // Lazy-loaded as separate chunks: visiting one section never downloads
 // another's code — they don't share screen time, so there's no reason to
@@ -12,6 +13,26 @@ const StaffApp = lazy(() => import("./staff/StaffApp.jsx"));
 
 function LoadingFallback() {
   return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontFamily: "system-ui,sans-serif" }}>Loading…</div>;
+}
+
+// TEMPORARY: Room Booking is PIN-locked while in testing. To reopen it,
+// delete this component and go back to mounting <App /> directly on the
+// /rooms/* route below. PinGate needs a flex/minHeight ancestor to center
+// itself (App.jsx normally provides that once it renders) — since this
+// sits in front of App rather than inside it, it provides its own.
+function RoomsLock() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#faf8fc" }}>
+      <PinGate
+        storageKey="ww_rooms_testing_pin"
+        pin="1335"
+        title="Room Booking"
+        subtitle="In testing mode — coming soon. To book a room, please contact wirral.services@cgl.org.uk."
+      >
+        <App />
+      </PinGate>
+    </div>
+  );
 }
 
 function NotFound() {
@@ -35,8 +56,10 @@ root.render(
         <Route path="/" element={<Landing />} />
         {/* Staff sign-in/out portal — its own multi-page section, own router. */}
         <Route path="/staff/*" element={<StaffApp />} />
-        {/* Room Booking: /rooms (browse) and /rooms/:slug (a specific room). */}
-        <Route path="/rooms/*" element={<App />} />
+        {/* Room Booking: /rooms (browse) and /rooms/:slug (a specific room).
+            TEMPORARY: PIN-locked while in testing — see RoomsLock above.
+            To reopen it, swap this back to element={<App />}. */}
+        <Route path="/rooms/*" element={<RoomsLock />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

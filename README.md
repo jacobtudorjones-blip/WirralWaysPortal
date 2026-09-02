@@ -185,6 +185,7 @@ src/
   main.jsx            React root — routes "/" to Landing, "/rooms/*" to the
                        Room Booking App, "/staff/*" to StaffApp
   pages/Landing.jsx    Portal hub — pick Room Booking or Staff Portal
+  components/PinGate.jsx  Shared PIN-code gate (used by both apps — see below)
   App.jsx             Room Booking: identity, tabs, data loading/saving.
                        Mounted at /rooms/*; parses a room slug from the URL
                        for /rooms/:slug deep links (see CLAUDE.md)
@@ -204,7 +205,7 @@ src/
   staff/               Staff Portal — see below
     StaffApp.jsx         route table, mounted at /staff/*
     components/          StaffLayout (header/nav/breadcrumbs), NamePicker,
-                          EmailGate, PinGate (used by WhoIsIn), UserFormModal,
+                          EmailGate, UserFormModal,
                           BulkAddUsersModal, StartFinishFlow (shared WFH/
                           outreach/elsewhere UI), SiteTile (site photo +
                           fallback), PersonAvailabilityCard (leave UI),
@@ -287,10 +288,19 @@ Outreach page's "Starting" tab).
 
 **`/staff/who` is PIN-gated, not email-gated** — matches the original
 app's design (a shared access code in front of live location data, not
-an individual login). The code is `886` (`PinGate.jsx`) — same caveat as
-every other gate in this app: client-side, extractable from the shipped
-JS, a deterrent not real security. It also never shows sign-in/start
-times, only presence — see the note in CLAUDE.md.
+an individual login). The code is `886` (`src/components/PinGate.jsx` —
+shared between both apps, see next paragraph) — same caveat as every
+other gate in this app: client-side, extractable from the shipped JS, a
+deterrent not real security. It also never shows sign-in/start times,
+only presence — see the note in CLAUDE.md.
+
+**Room Booking is currently PIN-locked for testing** (`main.jsx`'s
+`RoomsLock`, code `1335`, same `PinGate.jsx` as above) — visiting
+`/rooms/*` shows "In testing mode — coming soon" with a contact email
+instead of the app, until the right code is entered, at which point it's
+the real app in full. This is temporary and sits entirely in `main.jsx`
+in front of `App.jsx`, not inside it — remove `RoomsLock` and go back to
+mounting `<App />` directly on the `/rooms/*` route to reopen it properly.
 
 **Not a public site:** `public/robots.txt` disallows crawling entirely, and
 there's no analytics on either app — the Staff Portal specifically records

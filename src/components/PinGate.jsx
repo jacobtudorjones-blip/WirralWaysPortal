@@ -1,19 +1,18 @@
-// Shared-PIN gate — used for /staff/who specifically, matching the
-// original single-file app's design (a PIN prompt in front of live
-// location data, separate from the email-based gates elsewhere).
+// Shared-PIN gate — a code shared with a group of people rather than an
+// individual login, matching the original single-file Staff Portal app's
+// design for /staff/who. Reused for Room Booking's temporary testing-mode
+// lock too (see main.jsx) — same pattern, different code per caller.
 //
 // SECURITY NOTE: same caveat as every other gate in this app (EmailGate,
 // APPROVERS — see README) — a client-side check, not real authentication.
 // The PIN sits in the shipped JS bundle and is trivially extractable via
-// dev tools; this stops casual browsing of who's on site, not a
-// determined visitor. RLS on the underlying tables is the real boundary,
-// and it's deliberately permissive (see supabase/staff-portal-schema.sql).
+// dev tools; this stops casual browsing/booking, not a determined visitor.
+// RLS on the underlying tables is the real boundary, and it's deliberately
+// permissive (see supabase/staff-portal-schema.sql).
 import { useState } from "react";
-import { CGL } from "../../data/rooms.js";
+import { CGL } from "../data/rooms.js";
 
-const PIN = "886";
-
-function PinGate({ storageKey, title, subtitle, children }) {
+function PinGate({ storageKey, pin, title, subtitle, children }) {
   const [unlocked, setUnlocked] = useState(() => {
     try { return sessionStorage.getItem(storageKey) === "unlocked"; } catch { return false; }
   });
@@ -24,7 +23,7 @@ function PinGate({ storageKey, title, subtitle, children }) {
 
   function submit(e) {
     e.preventDefault();
-    if (input.trim() === PIN) {
+    if (input.trim() === pin) {
       try { sessionStorage.setItem(storageKey, "unlocked"); } catch { /* ignore */ }
       setUnlocked(true);
       setError(null);
