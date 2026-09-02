@@ -8,12 +8,16 @@
 
 // attachment (optional): { name: "booking.ics", content: "<base64>" } —
 // see App.jsx's icsAttachment() helper for how the calendar invite gets built.
-async function sendEmail(to, subject, bodyText, attachment) {
+// from (optional): which verified Brevo sender to send as — "room-booking"
+// (the default, if omitted) or "staff-portal". See send-email.js's SENDERS
+// map; this is a short key, not a raw address, so the function decides the
+// real sender server-side rather than trusting whatever the client sends.
+async function sendEmail(to, subject, bodyText, attachment, from) {
   try {
     const res = await fetch("/.netlify/functions/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, subject, textContent: bodyText, attachment: attachment || undefined }),
+      body: JSON.stringify({ to, subject, textContent: bodyText, attachment: attachment || undefined, from: from || undefined }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

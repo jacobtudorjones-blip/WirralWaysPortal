@@ -92,21 +92,27 @@ plain JS (not TypeScript) project with no test suite yet.
   fixed. This only works on Netlify (functions need a host that runs them);
   if the frontend ever moves to static-only hosting (one.com), this needs
   to move to something that still executes it (a Supabase Edge Function is
-  the natural alternative). The sender is hardcoded as
-  `rooms@wirralways.org.uk` in both `send-email.js` and
-  `manager-report.js` — confirmed verified in Brevo (Senders, domains, IPs
-  → Senders: green "Verified", DKIM configured for the `wirralways.org.uk`
-  domain, DMARC configured). Don't change this to an address that isn't
-  in that verified-senders list — Brevo silently rejects sends from an
-  unrecognized sender and the function returns a 502 to the browser with
-  no other symptom (this was tried once with `noreply@wirralways.org.uk`
-  on the assumption it'd be verified because WordPress sends from it —
-  that assumption was wrong, Brevo didn't have it listed, and it made the
-  502s worse). If emails stop arriving, the sender being unverified is
-  *not* the first thing to suspect any more since it's confirmed fine —
-  check the Netlify function log for `send-email`/`manager-report` for
-  the actual Brevo rejection reason (status + response body, logged via
-  `console.error`) before guessing at a cause.
+  the natural alternative). `send-email.js` is shared by both apps and
+  picks its Brevo sender from a small server-side `SENDERS` map keyed by
+  a `from` string the caller passes (`"room-booking"`, the default if
+  omitted, or `"staff-portal"`) — never a raw address from the client,
+  so this can't be used to send as an arbitrary sender. Room Booking
+  (`src/lib/email.js` callers that don't pass `from`) sends as
+  `rooms@wirralways.org.uk`; Staff Portal (`src/staff/lib/notify.js`,
+  and `manager-report.js` — a separate function with its own hardcoded
+  `FROM`, not routed through `send-email.js`) sends as
+  `noreply@wirralways.org.uk`. Both are confirmed verified in Brevo
+  (Senders, domains, IPs → Senders: green "Verified", DKIM configured for
+  the `wirralways.org.uk` domain, DMARC configured). Adding a sender that
+  isn't in Brevo's verified list is exactly what caused a real incident:
+  Brevo silently rejects sends from an unrecognized sender and the
+  function returns a 502 to the browser with no other symptom — always
+  check Brevo's Senders page shows an address as Verified before wiring
+  it up, don't assume. If emails stop arriving, check the Netlify
+  function log for `send-email`/`manager-report` for the actual Brevo
+  rejection reason (status + response body, logged via `console.error`)
+  before guessing at a cause — sender verification is the most common
+  one, but not the only one.
 - Room types on Room Booking rooms (`src/data/rooms.js`) are a `types`
   array per room, not a single string — a room can legitimately be both a
   121 room and a group space, for example. `ROOM_TYPES` (exported from

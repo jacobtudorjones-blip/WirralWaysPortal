@@ -13,6 +13,8 @@ async function sendSignInAck(email, name, destinationLabel) {
     email,
     "Signed in — " + destinationLabel,
     "Hi " + (name.split(" ")[0] || name) + ",\n\nThis confirms you've signed in at " + destinationLabel + ".\n\nWirral Ways Staff Portal",
+    undefined,
+    "staff-portal",
   );
 }
 
@@ -23,6 +25,8 @@ async function sendVisitorNotification(hostEmail, hostName, visitorName, destina
     hostEmail,
     visitorName + " is here to see you",
     "Hi " + (hostName.split(" ")[0] || hostName) + ",\n\n" + visitorName + " has signed in at " + destinationLabel + " to see you.\n\nWirral Ways Staff Portal",
+    undefined,
+    "staff-portal",
   );
 }
 

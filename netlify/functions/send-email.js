@@ -25,7 +25,18 @@
 // arbitrary bulk mail, a spoofed sender, or large file hosting.
 
 const BREVO_KEY = process.env.BREVO_API_KEY;
-const FROM = { name: "Wirral Ways Room Booking", email: "rooms@wirralways.org.uk" };
+
+// Two verified Brevo senders, one per app — this function is shared by
+// both, so the caller picks which via `from` (a short key, not a raw
+// address: keeps this from being a spoofed-sender relay, same reasoning
+// as the rest of this file's request validation). Anything unrecognised
+// (missing, typo'd, tampered) falls back to the room-booking sender
+// rather than erroring, since that's the original/default behaviour.
+const SENDERS = {
+  "room-booking": { name: "Wirral Ways Room Booking", email: "rooms@wirralways.org.uk" },
+  "staff-portal": { name: "Wirral Ways Staff Portal", email: "noreply@wirralways.org.uk" },
+};
+const DEFAULT_SENDER = "room-booking";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_RECIPIENTS = 25;
 const MAX_ATTACHMENT_B64 = 100000; // ~75KB decoded — generous for a booking .ics, nowhere near "file hosting"
@@ -51,7 +62,8 @@ export const handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
   }
 
-  const { to, subject, textContent, attachment } = payload;
+  const { to, subject, textContent, attachment, from } = payload;
+  const sender = SENDERS[from] || SENDERS[DEFAULT_SENDER];
 
   // `to` is usually a single address, but the room-booking approver
   // notification sends to the whole (short) APPROVERS list as one
@@ -88,7 +100,7 @@ export const handler = async (event) => {
       method: "POST",
       headers: { "api-key": BREVO_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
-        sender: FROM,
+        sender,
         to: recipients.map(email => ({ email })),
         subject,
         textContent,
