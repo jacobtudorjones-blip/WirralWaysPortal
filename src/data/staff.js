@@ -8,11 +8,11 @@ import { slugify } from "../lib/helpers.js";
 // app so both halves of the portal agree on what a "site" is.
 //
 // `image`: an optional photo per site, expected at this path under
-// public/ (e.g. public/sites/price-street.jpg). None are shipped yet —
-// drop real photos in there using this exact naming (slugified site name)
-// and they'll show automatically; until then every site card falls back
-// to its colour tile (SiteTile.jsx handles the missing-image case, it's
-// not an error to leave these unset).
+// public/ (e.g. public/sites/price-street.jpg) — all four are shipped
+// (public/sites/*.jpg). If a site's photo is ever missing (new site added,
+// or a file goes missing), its card just falls back to its colour tile
+// (SiteTile.jsx handles the missing-image case, it's not an error to
+// leave one unset).
 const OFFICE_SITES = ROOM_SITES.map(name => ({
   id: name,
   label: name,
