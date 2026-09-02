@@ -30,4 +30,37 @@ async function sendVisitorNotification(hostEmail, hostName, visitorName, destina
   );
 }
 
-export { sendSignInAck, sendVisitorNotification };
+// Lets a manager know one of their team has just started an outreach
+// trip — where, and when they're expected back — for lone-working
+// visibility, not just after-the-fact via the overdue alert. Only fires
+// when the person on outreach has a manager on file with an email; no
+// manager set is not an error, just nothing to send.
+async function sendOutreachStartNotification(managerEmail, managerName, personName, location, expectedReturn) {
+  if (!managerEmail) return;
+  await sendEmail(
+    managerEmail,
+    personName + " is out on outreach",
+    "Hi " + (managerName.split(" ")[0] || managerName) + ",\n\n" + personName + " has signed in for outreach" +
+      (location ? " to " + location : "") +
+      (expectedReturn ? ", expected back around " + expectedReturn : "") +
+      ".\n\nLive view: https://portal.wirralways.org.uk/staff/who\n\nWirral Ways Staff Portal",
+    undefined,
+    "staff-portal",
+  );
+}
+
+// The other half of sendOutreachStartNotification — lets the manager know
+// their team member is back safe, without them having to check the live
+// "who's in" view or wait for the overdue alert to (not) fire.
+async function sendOutreachReturnNotification(managerEmail, managerName, personName) {
+  if (!managerEmail) return;
+  await sendEmail(
+    managerEmail,
+    personName + " is back from outreach",
+    "Hi " + (managerName.split(" ")[0] || managerName) + ",\n\n" + personName + " has signed back in from outreach.\n\nWirral Ways Staff Portal",
+    undefined,
+    "staff-portal",
+  );
+}
+
+export { sendSignInAck, sendVisitorNotification, sendOutreachStartNotification, sendOutreachReturnNotification };

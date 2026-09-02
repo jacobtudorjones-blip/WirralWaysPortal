@@ -155,7 +155,27 @@ plain JS (not TypeScript) project with no test suite yet.
   The approver-notify email also names the real requester
   (`requestedBy`/`requestedByEmail`), with a separate "Booked for" line
   when it's not the same person — it used to show `bookedBy` as
-  "Requested by", which is wrong in exactly this case.
+  "Requested by", which is wrong in exactly this case. The "new room
+  request" approver-notify email goes to `REQUEST_NOTIFY_EMAILS`
+  (`src/data/rooms.js`) — deliberately **not** the full `APPROVERS` list;
+  `APPROVERS` stays the access-control allowlist (who can log in and
+  approve/reject), this is just narrower on purpose for where the email
+  itself lands. Every booking email is also HTML now, not just plain
+  text — `buildEmail()` wraps its plain-text `body` through
+  `lib/emailHtml.js`'s `buildHtmlEmail()` to add clickable buttons (e.g.
+  "Cancel this booking", "Review this request"), sent as `htmlContent`
+  alongside `textContent` so plain-text clients still get something
+  sensible. A "cancel" button deliberately does **not** cancel straight
+  from the link — it lands on `/rooms?tab=mybookings` (App.jsx reads a
+  `?tab=` query param at identify-time to preselect that tab), where
+  cancelling still needs an explicit click on the booking itself. That's
+  intentional: a mail client or security scanner pre-fetching links in an
+  email could otherwise silently trigger a real cancellation. Every
+  button links to `portal.wirralways.org.uk/...`, not the old
+  `rooms.wirralways.org.uk` some of these email bodies used to reference
+  — that subdomain never existed post-restructure (Room Booking lives at
+  `/rooms` on the portal domain now, not its own subdomain); fix that
+  domain again if it resurfaces anywhere.
 - `netlify/functions/manager-report.js` is a *scheduled* function
   (`netlify.toml`'s cron is `*/15 8-10 * * *` — restricted to 8-10am UTC,
   not all day, to avoid burning a function invocation every 15 minutes
@@ -194,6 +214,40 @@ plain JS (not TypeScript) project with no test suite yet.
   self-registered) also fires `sendSignInAck` — both live in
   `src/staff/lib/notify.js`, wired into `SignIn.jsx` and
   `StartFinishFlow.jsx`'s `submitStart`.
+- `/staff/sign-out` is unified the same way sign-in is — pulls open
+  records from all four attendance tables (`staff_sign_ins` +
+  `staff_wfh`/`staff_elsewhere`/`staff_outreach`) and normalises them into
+  one list, instead of only ever showing office sign-ins like it used to.
+  That gap was real: anyone who'd started WFH/Elsewhere/Outreach from the
+  unified Sign In page had no way to end it from Sign Out, only from that
+  mode's own dedicated page. `SignIn.jsx` also has a "Returning from
+  outreach" tile that isn't a new destination — it navigates to
+  `/staff/sign-out?filter=staff_outreach`, which narrows Sign Out's list
+  to outreach-only (`SignOut.jsx`'s `FILTER_LABELS`) so someone doesn't
+  have to scan past everyone signed in elsewhere to find their own name.
+- Outreach has manager notifications at both ends, plus a safety-net
+  alert if someone goes quiet — all three live in `src/staff/lib/notify.js`
+  and only fire when the person has a `manager_id` on file with an email:
+  - **Starting** outreach (`SignIn.jsx`, and `StartFinishFlow.jsx`'s
+    `submitStart`) emails the manager where the person's gone and when
+    they're expected back (`sendOutreachStartNotification`).
+  - **Returning** (the dedicated Outreach page's "Finishing" tab, *and*
+    the unified `/staff/sign-out` page — both close the same
+    `staff_outreach` row) emails the manager that they're back safe
+    (`sendOutreachReturnNotification`).
+  - **Overdue** (`netlify/functions/outreach-overdue-alert.js`, scheduled
+    every 15 minutes during roughly 6am-8pm UTC per `netlify.toml`) emails
+    the manager if someone is 15+ minutes past their `expected_return` and
+    still hasn't signed back in — a lone-working check, not just
+    attendance bookkeeping. Computes "overdue" in Europe/London wall-clock
+    terms (same DST reasoning as `manager-report.js`'s `isReportTime()`,
+    applied to a full date+time here rather than just an hour/minute
+    check) since `expected_return` is a local "HH:MM" the person typed,
+    not a UTC value. A boolean `overdue_notified` column on
+    `staff_outreach` stops it re-emailing every 15 minutes for the same
+    still-open trip — reset only by the next trip being a fresh row.
+    Mirrors `WhoIsIn.jsx`'s `isOverdue()` logic; keep both in sync if that
+    ever changes.
 - `/staff/who` (WhoIsIn.jsx) is **PIN-gated** (`src/components/PinGate.jsx`,
   code `886`), not email-gated like the rest of the portal — matches the
   original single-file app's design. `PinGate` is shared (top-level

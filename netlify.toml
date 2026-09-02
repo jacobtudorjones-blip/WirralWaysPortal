@@ -14,3 +14,13 @@
 # with an hour's margin either side, cutting ~96 invocations/day to ~12.
 [functions."manager-report"]
   schedule = "*/15 8-10 * * *"
+
+# outreach-overdue-alert checks whether anyone on outreach is 15+ minutes
+# overdue and, unlike manager-report, has to actually run repeatedly all
+# working day — overdue events aren't tied to one moment. Windowed to
+# roughly 6am-8pm UTC (covers ~7am-9pm BST / 6am-8pm GMT, a reasonable
+# outreach working day with margin) rather than around the clock, same
+# invocation-budget reasoning as manager-report's window above. Widen or
+# narrow this if outreach regularly happens outside it.
+[functions."outreach-overdue-alert"]
+  schedule = "*/15 6-19 * * *"

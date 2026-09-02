@@ -12,12 +12,15 @@
 // (the default, if omitted) or "staff-portal". See send-email.js's SENDERS
 // map; this is a short key, not a raw address, so the function decides the
 // real sender server-side rather than trusting whatever the client sends.
-async function sendEmail(to, subject, bodyText, attachment, from) {
+// htmlContent (optional): an HTML version of the same message — see
+// lib/emailHtml.js's buildHtmlEmail() — used to render clickable buttons
+// (e.g. "Cancel this booking") instead of a bare URL in the plain text.
+async function sendEmail(to, subject, bodyText, attachment, from, htmlContent) {
   try {
     const res = await fetch("/.netlify/functions/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, subject, textContent: bodyText, attachment: attachment || undefined, from: from || undefined }),
+      body: JSON.stringify({ to, subject, textContent: bodyText, attachment: attachment || undefined, from: from || undefined, htmlContent: htmlContent || undefined }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

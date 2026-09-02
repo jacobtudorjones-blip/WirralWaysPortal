@@ -96,8 +96,17 @@ create table if not exists staff_outreach (
   expected_return  text, -- "HH:MM", time-of-day they expect to be back
   notes            text,
   start_time       timestamptz not null default now(),
-  returned_time    timestamptz
+  returned_time    timestamptz,
+  -- Set once netlify/functions/outreach-overdue-alert.js has emailed this
+  -- person's manager that they're 15+ minutes overdue and hasn't signed
+  -- back in — stops that scheduled function re-emailing every time it
+  -- runs while the same trip is still open. Naturally resets to false on
+  -- their next outreach trip (a fresh row).
+  overdue_notified boolean not null default false
 );
+-- Safe to re-run on a project that already has staff_outreach from an
+-- earlier version of this file.
+alter table staff_outreach add column if not exists overdue_notified boolean not null default false;
 
 -- ── LEAVE ──────────────────────────────────────────────────────────────
 -- One-off date-range absences (annual leave, sick, etc.) — who recorded

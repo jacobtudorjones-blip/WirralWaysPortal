@@ -21,14 +21,14 @@
 // person a heads-up. Everyone we have an email for gets a sign-in
 // confirmation too (lib/notify.js).
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { CGL } from "../../data/rooms.js";
 import { OFFICE_SITES, REMOTE_MODES } from "../../data/staff.js";
 import { inp, lbl } from "../../styles/shared.js";
 import { insertRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { closeAnyOpenRecordForUser } from "../lib/attendance.js";
-import { sendSignInAck, sendVisitorNotification } from "../lib/notify.js";
+import { sendSignInAck, sendVisitorNotification, sendOutreachStartNotification } from "../lib/notify.js";
 import NamePicker from "../components/NamePicker.jsx";
 import PageWrap from "../components/PageWrap.jsx";
 import PrivacyNote from "../components/PrivacyNote.jsx";
@@ -42,6 +42,7 @@ const PERSON_TYPES = [
 const DESTINATIONS = [...OFFICE_SITES, ...REMOTE_MODES];
 
 function SignIn() {
+  const navigate = useNavigate();
   const { activeUsers, addUser } = useStaffUsers();
   const [destId, setDestId] = useState(null);
   const [name, setName] = useState("");
@@ -119,6 +120,11 @@ function SignIn() {
         const host = activeUsers.find(u => u.id === hostId);
         if (host) sendVisitorNotification(host.email, host.name, name.trim(), dest.label);
       }
+      if (table === "staff_outreach" && effectiveUserId) {
+        const person = activeUsers.find(u => u.id === effectiveUserId);
+        const manager = person?.manager_id ? activeUsers.find(u => u.id === person.manager_id) : null;
+        if (manager) sendOutreachStartNotification(manager.email, manager.name, name.trim(), location.trim(), expectedReturn);
+      }
 
       setDone(true);
     } catch (err) {
@@ -156,6 +162,13 @@ function SignIn() {
           {DESTINATIONS.map(d => (
             <SiteTile key={d.id} label={d.label} color={d.color} icon={d.icon} image={d.image} onClick={() => setDestId(d.id)} />
           ))}
+          {/* Not a new destination — this is "I'm back", i.e. ending an
+              existing open outreach record. Reuses Sign Out (now unified
+              across all four attendance tables) rather than duplicating
+              that logic here; ?filter narrows its list to outreach only
+              so someone doesn't have to scan past everyone else who's
+              signed in elsewhere to find their own name. */}
+          <SiteTile label="Returning from outreach" color={CGL.blackcurrant} icon="↩️" onClick={() => navigate("/staff/sign-out?filter=staff_outreach")} />
         </div>
       ) : (
         <form onSubmit={submit}>

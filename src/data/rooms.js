@@ -40,6 +40,13 @@ const APPROVERS = [
   { email: "jack.lawson@cgl.org.uk" },
 ];
 
+// Who the "new room request" notification email goes to — deliberately not
+// the same as APPROVERS above. APPROVERS is the access-control list (who
+// can log in and approve/reject); this is just where the "someone needs
+// your approval" *email* lands, which the team wants narrower than the
+// full approver list.
+const REQUEST_NOTIFY_EMAILS = ["wirral.services@cgl.org.uk", "jacob.jones2@cgl.org.uk"];
+
 // ─── GENERIC FLOOR PLAN LAYOUT ────────────────────────────────────────────────
 function genericLayout(capacity = 4) {
   const cols = Math.min(capacity, 4);
@@ -151,4 +158,4 @@ const SITES = ["Price Street","Market Street","Argyle Street","Brighton Street"]
 // unique in practice; if two ever collide the later one in RAW_ROOMS wins.
 const ROOM_BY_SLUG = Object.fromEntries(ROOM_LIST.map(r => [r.slug, r]));
 
-export { CGL, SITE_COLOR, APPROVERS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, ROOM_TYPES, SITES };
+export { CGL, SITE_COLOR, APPROVERS, REQUEST_NOTIFY_EMAILS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, ROOM_TYPES, SITES };

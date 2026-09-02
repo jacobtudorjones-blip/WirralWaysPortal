@@ -62,7 +62,7 @@ export const handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
   }
 
-  const { to, subject, textContent, attachment, from } = payload;
+  const { to, subject, textContent, htmlContent, attachment, from } = payload;
   const sender = SENDERS[from] || SENDERS[DEFAULT_SENDER];
 
   // `to` is usually a single address, but the room-booking approver
@@ -81,6 +81,11 @@ export const handler = async (event) => {
   }
   if (typeof textContent !== "string" || !textContent.trim() || textContent.length > 20000) {
     return { statusCode: 400, body: JSON.stringify({ error: "textContent is required (max 20000 chars)" }) };
+  }
+  // Optional — a plain-text email is still valid without it (some clients
+  // prefer/only show text anyway), htmlContent just adds clickable buttons.
+  if (htmlContent != null && (typeof htmlContent !== "string" || htmlContent.length > 50000)) {
+    return { statusCode: 400, body: JSON.stringify({ error: "htmlContent must be a string (max 50000 chars)" }) };
   }
 
   let attachments;
@@ -104,6 +109,7 @@ export const handler = async (event) => {
         to: recipients.map(email => ({ email })),
         subject,
         textContent,
+        ...(htmlContent ? { htmlContent } : {}),
         ...(attachments ? { attachment: attachments } : {}),
       }),
     });

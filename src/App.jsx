@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CGL, APPROVERS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
+import { CGL, APPROVERS, REQUEST_NOTIFY_EMAILS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
 import { genId, norm, todayStr, nowStr, formatDate, formatDateShort, formatTime } from "./lib/helpers.js";
 import { slotToMins } from "./lib/slots.js";
 import { loadKey, saveKey } from "./lib/storage.js";
 import { addToWaitlist, notifyWaitlist } from "./lib/waitlist.js";
 import { sendEmail } from "./lib/email.js";
+import { buildHtmlEmail } from "./lib/emailHtml.js";
 import { buildICS } from "./lib/ics.js";
 import { nameFromEmail } from "./lib/nameFromEmail.js";
 import { inp } from "./styles/shared.js";
@@ -55,6 +56,14 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const slugFromUrl = location.pathname.replace(/^\/rooms\/?/, "").split("/")[0] || null;
+  // ?tab=mybookings|approver on plain /rooms — used by email buttons ("View
+  // your bookings", "Review this request") so they land somewhere useful
+  // instead of the room-browsing home tab. Allowlisted to known tabs only;
+  // ignored once a room slug is present (that always wins, see above).
+  const tabFromUrl = (() => {
+    const t = new URLSearchParams(location.search).get("tab");
+    return t === "mybookings" || t === "approver" ? t : null;
+  })();
 
   // URL → state: a room slug in the URL selects that room, whenever it changes.
   useEffect(()=>{
@@ -119,7 +128,7 @@ function App() {
       const updated = [...bookings];
       for(const b of due) {
         const email = buildEmail("reminder", b);
-        await sendEmail(email.to, email.subject, email.body, icsAttachment(b));
+        await sendEmail(email.to, email.subject, email.body, icsAttachment(b), undefined, email.html);
         const idx = updated.findIndex(x=>x.id===b.id);
         if(idx>=0) updated[idx] = {...updated[idx], reminderSent:true, reminderSentAt:nowStr()};
       }
@@ -237,37 +246,65 @@ function App() {
       : booking.email + "," + booking.requestedByEmail;
   }
 
-  function buildEmail(type, booking) {
+  // Buttons on every email link back here rather than any bare
+  // rooms.wirralways.org.uk (that subdomain never existed post-restructure
+  // — Room Booking lives at /rooms on the portal domain, not its own
+  // subdomain; the old text was stale from before that move).
+  const PORTAL_URL = "https://portal.wirralways.org.uk";
+  const MY_BOOKINGS_URL = PORTAL_URL + "/rooms?tab=mybookings";
+  // Cancelling isn't done straight from the email link (a mail client or
+  // security scanner pre-fetching links could silently trigger it) — the
+  // button lands on My Bookings, where cancelling still needs an explicit
+  // click on the booking itself, same as using the app normally.
+  const CANCEL_BUTTON = { label: "Cancel this booking", url: MY_BOOKINGS_URL, color: CGL.raspberry };
+
+  // The if-chain below builds the plain-text side (to/subject/body/buttons)
+  // per email type; buildEmail() wraps it to also render an HTML version
+  // with clickable buttons (lib/emailHtml.js) — kept separate so each
+  // branch above only has to describe its own content, not repeat the
+  // HTML-wrapping call five times.
+  function buildEmailCore(type, booking) {
     const room = ROOMS[booking.roomId];
     const detail = "Room: " + room.name + " (" + room.site + ")\nDate: " + formatDate(booking.date) + "\nTime: " + formatTime(booking.startTime) + " – " + formatTime(booking.endTime) + "\nPurpose: " + booking.title;
     if(type==="requested") return {
       to: recipientsFor(booking), type,
       subject: "Room request received — " + room.name + ", " + formatDateShort(booking.date) + "",
-      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nYour request to book a room at Wirral Ways has been received. An approver will review it shortly and you'll get a confirmation email once it's been approved or if there's a problem.\n\n" + detail + "\n\nIf you need to make any changes, please get in touch.\n\nWirral Ways Room Booking\nrooms.wirralways.org.uk",
+      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nYour request to book a room at Wirral Ways has been received. An approver will review it shortly and you'll get a confirmation email once it's been approved or if there's a problem.\n\n" + detail + "\n\nIf you need to make any changes, please get in touch.\n\nWirral Ways Room Booking\n" + MY_BOOKINGS_URL,
+      buttons: [{ label: "View your bookings", url: MY_BOOKINGS_URL }],
     };
     if(type==="confirmed") return {
       to: recipientsFor(booking), type,
       subject: "Booking confirmed — " + room.name + ", " + formatDateShort(booking.date) + "",
-      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nGreat news — your room booking has been confirmed.\n\n" + detail + "\n\nPlease remember to check in when you arrive. If you need to cancel, you can do that at rooms.wirralways.org.uk.\n\nWirral Ways Room Booking",
+      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nGreat news — your room booking has been confirmed.\n\n" + detail + "\n\nPlease remember to check in when you arrive. No longer need it? You can cancel from " + MY_BOOKINGS_URL + ".\n\nWirral Ways Room Booking",
+      buttons: [CANCEL_BUTTON],
     };
     if(type==="rejected") return {
       to: recipientsFor(booking), type,
       subject: "Booking update — " + room.name + ", " + formatDateShort(booking.date) + "",
       body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nUnfortunately your room request could not be approved." + (booking.rejectionNote ? "\n\nReason: " + booking.rejectionNote : "") + "\n\n" + detail + "\n\nIf you have any questions, please get in touch with the team.\n\nWirral Ways Room Booking",
+      buttons: [{ label: "View your bookings", url: MY_BOOKINGS_URL }, { label: "Contact the team", url: "mailto:wirral.services@cgl.org.uk", color: CGL.blackcurrant }],
     };
     if(type==="approver_notify") return {
-      to: APPROVERS.map(a=>a.email).join(", "), type: "requested",
+      to: REQUEST_NOTIFY_EMAILS.join(", "), type: "requested",
       subject: "New room request — " + room.name + ", " + formatDateShort(booking.date) + "",
       // requestedBy/requestedByEmail is whoever submitted it, which isn't
       // always the same as bookedBy/email (see bookingForOther) — approvers
       // should see who actually made the request, not just who it's for.
-      body: "Hi,\n\nA new room booking request has been submitted at Wirral Ways and needs your approval.\n\n" + detail + "\nRequested by: " + booking.requestedBy + " (" + booking.requestedByEmail + ")" + (booking.bookedForOther ? "\nBooked for: " + booking.bookedBy + " (" + booking.email + ")" : "") + "\n\nPlease log in to rooms.wirralways.org.uk to approve or reject this request.\n\nWirral Ways Room Booking",
+      body: "Hi,\n\nA new room booking request has been submitted at Wirral Ways and needs your approval.\n\n" + detail + "\nRequested by: " + booking.requestedBy + " (" + booking.requestedByEmail + ")" + (booking.bookedForOther ? "\nBooked for: " + booking.bookedBy + " (" + booking.email + ")" : "") + "\n\nPlease log in to " + PORTAL_URL + "/rooms?tab=approver to approve or reject this request.\n\nWirral Ways Room Booking",
+      buttons: [{ label: "Review this request", url: PORTAL_URL + "/rooms?tab=approver" }],
     };
     if(type==="reminder") return {
       to: recipientsFor(booking), type: "confirmed",
       subject: "Reminder: " + room.name + " tomorrow — " + formatDateShort(booking.date) + "",
-      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nJust a reminder that you have a room booking tomorrow.\n\n" + detail + (booking.notes ? "\n\nRequirements noted: " + booking.notes : "") + "\n\nPlease remember to check in when you arrive. You can do this from rooms.wirralways.org.uk.\n\nWirral Ways Room Booking",
+      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nJust a reminder that you have a room booking tomorrow.\n\n" + detail + (booking.notes ? "\n\nRequirements noted: " + booking.notes : "") + "\n\nPlease remember to check in when you arrive. No longer need it? You can cancel from " + MY_BOOKINGS_URL + ".\n\nWirral Ways Room Booking",
+      buttons: [CANCEL_BUTTON],
     };
+  }
+
+  function buildEmail(type, booking) {
+    const result = buildEmailCore(type, booking);
+    result.html = buildHtmlEmail(result.body, result.buttons || []);
+    return result;
   }
 
   function handleBook(form,dates){
@@ -313,11 +350,11 @@ function App() {
     setShowForm(false);
     const emailType = autoApprove ? "confirmed" : "requested";
     const notifyEmail = buildEmail(emailType, newBookings[0]);
-    sendEmail(notifyEmail.to, notifyEmail.subject, notifyEmail.body, notifyEmail.type==="confirmed" ? icsAttachment(newBookings[0]) : undefined);
+    sendEmail(notifyEmail.to, notifyEmail.subject, notifyEmail.body, notifyEmail.type==="confirmed" ? icsAttachment(newBookings[0]) : undefined, undefined, notifyEmail.html);
     // Only notify approvers if this wasn't auto-approved
     if(!autoApprove){
       const approverEmail = buildEmail("approver_notify", newBookings[0]);
-      sendEmail(approverEmail.to, approverEmail.subject, approverEmail.body);
+      sendEmail(approverEmail.to, approverEmail.subject, approverEmail.body, undefined, undefined, approverEmail.html);
     }
     setEmailPreview(notifyEmail);
   }
@@ -356,7 +393,7 @@ function App() {
     persistB(bookings.map(bk=>bk.id===id?updated:bk));
     addAudit("booking_approved", user.name + " approved \"" + b.title + "\" — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name);
     const email=buildEmail("confirmed",updated);
-    sendEmail(email.to,email.subject,email.body,icsAttachment(updated));
+    sendEmail(email.to,email.subject,email.body,icsAttachment(updated),undefined,email.html);
     setEmailPreview(email);
   }
 
@@ -366,7 +403,7 @@ function App() {
     persistB(bookings.map(bk=>bk.id===id?updated:bk));
     addAudit("booking_rejected", user.name + " rejected \"" + b.title + "\" — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name, note||null);
     const email=buildEmail("rejected",updated);
-    sendEmail(email.to,email.subject,email.body);
+    sendEmail(email.to,email.subject,email.body,undefined,undefined,email.html);
     setEmailPreview(email);
   }
 
@@ -451,6 +488,7 @@ function App() {
     // post-login default tab, so a shared room link still lands there.
     const deepLinkedRoom = slugFromUrl ? ROOM_BY_SLUG[slugFromUrl] : null;
     if(deepLinkedRoom){ setTab("floorplans"); setActiveRoom(deepLinkedRoom.id); }
+    else if(tabFromUrl && (tabFromUrl!=="approver" || identity.isApprover)) setTab(tabFromUrl);
     else setTab(identity.isApprover?"approver":"home");
     // If bookings are already loaded, process login now; otherwise queue for when they load
     if(bookings.length > 0) {
