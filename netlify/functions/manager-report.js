@@ -31,7 +31,7 @@
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 const BREVO_KEY = process.env.BREVO_API_KEY;
-const FROM = { name: "Wirral Ways Staff Portal", email: "noreply@wirralways.org.uk" };
+const FROM = { name: "Wirral Ways Staff Portal", email: "rooms@wirralways.org.uk" };
 const REPORT_HOUR = 9;
 const REPORT_MINUTE_START = 30;
 const REPORT_WINDOW_MINUTES = 15; // must match this function's cron schedule below

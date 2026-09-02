@@ -13,7 +13,7 @@ function EmailNotificationPreview({ data, onClose }) {
         </div>
         <div style={{padding:"24px",fontSize:14,color:"#333",lineHeight:1.75,whiteSpace:"pre-line"}}>{body}</div>
         <div style={{padding:"14px 24px",borderTop:"1px solid "+(CGL.lavender),display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:11,color:"#aaa"}}>Emails are sent automatically via noreply@wirralways.org.uk.</div>
+          <div style={{fontSize:11,color:"#aaa"}}>Emails are sent automatically via rooms@wirralways.org.uk.</div>
           <button onClick={onClose} style={{background:CGL.blackcurrant,color:"white",border:"none",borderRadius:8,padding:"9px 20px",cursor:"pointer",fontWeight:700,fontSize:13,fontFamily:"inherit"}}>Close</button>
         </div>
       </div>
