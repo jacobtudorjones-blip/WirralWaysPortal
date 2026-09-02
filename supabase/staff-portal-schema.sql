@@ -38,15 +38,24 @@ create extension if not exists pgcrypto; -- for gen_random_uuid()
 -- The "add users" feature: one row per member of staff. manager_id is a
 -- self-referencing link so a manager is picked from this same table.
 create table if not exists staff_users (
-  id          uuid primary key default gen_random_uuid(),
-  name        text not null,
-  email       text not null unique,
-  site        text,                          -- one of the Room Booking SITES, or null
-  role        text not null default 'staff', -- 'staff' | 'manager' | 'admin'
-  manager_id  uuid references staff_users(id) on delete set null,
-  active      boolean not null default true,
-  created_at  timestamptz not null default now()
+  id                 uuid primary key default gen_random_uuid(),
+  name               text not null,
+  email              text not null unique,
+  site               text,                          -- one of the Room Booking SITES, or null
+  role               text not null default 'staff', -- 'staff' | 'manager' | 'admin'
+  manager_id         uuid references staff_users(id) on delete set null,
+  active             boolean not null default true,
+  -- Recurring days this person doesn't normally work, e.g. {'Fri','Sat'}
+  -- for a part-time pattern — distinct from staff_leave below, which is
+  -- specific one-off date ranges (annual leave, sick, etc.), not a
+  -- standing weekly pattern. Values are full weekday names ("Mon".."Sun").
+  non_working_days  text[] not null default '{}',
+  created_at         timestamptz not null default now()
 );
+-- Safe to re-run on a project that already has staff_users from an
+-- earlier version of this file — `create table if not exists` above
+-- won't add a new column to an existing table, this will.
+alter table staff_users add column if not exists non_working_days text[] not null default '{}';
 
 -- ── ATTENDANCE RECORDS ────────────────────────────────────────────────────
 create table if not exists staff_sign_ins (
@@ -90,6 +99,21 @@ create table if not exists staff_outreach (
   returned_time    timestamptz
 );
 
+-- ── LEAVE ──────────────────────────────────────────────────────────────
+-- One-off date-range absences (annual leave, sick, etc.) — who recorded
+-- it (self, their manager, or an admin) is kept for accountability, not
+-- used to enforce anything server-side (see the security note below).
+create table if not exists staff_leave (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references staff_users(id) on delete cascade,
+  start_date    date not null,
+  end_date      date not null,
+  reason        text,
+  recorded_by   uuid references staff_users(id) on delete set null,
+  created_at    timestamptz not null default now(),
+  constraint staff_leave_dates_order check (end_date >= start_date)
+);
+
 create index if not exists staff_sign_ins_open_idx  on staff_sign_ins (site_id) where sign_out_time is null;
 create index if not exists staff_wfh_open_idx       on staff_wfh (id) where returned_time is null;
 create index if not exists staff_elsewhere_open_idx on staff_elsewhere (id) where returned_time is null;
@@ -101,6 +125,7 @@ alter table staff_sign_ins  enable row level security;
 alter table staff_wfh       enable row level security;
 alter table staff_elsewhere enable row level security;
 alter table staff_outreach  enable row level security;
+alter table staff_leave     enable row level security;
 
 -- Drop-then-create so this script is safe to re-run.
 drop policy if exists staff_users_anon_all     on staff_users;
@@ -108,12 +133,14 @@ drop policy if exists staff_sign_ins_anon_all  on staff_sign_ins;
 drop policy if exists staff_wfh_anon_all       on staff_wfh;
 drop policy if exists staff_elsewhere_anon_all on staff_elsewhere;
 drop policy if exists staff_outreach_anon_all  on staff_outreach;
+drop policy if exists staff_leave_anon_all     on staff_leave;
 
 create policy staff_users_anon_all     on staff_users     for all to anon using (true) with check (true);
 create policy staff_sign_ins_anon_all  on staff_sign_ins  for all to anon using (true) with check (true);
 create policy staff_wfh_anon_all       on staff_wfh       for all to anon using (true) with check (true);
 create policy staff_elsewhere_anon_all on staff_elsewhere for all to anon using (true) with check (true);
 create policy staff_outreach_anon_all  on staff_outreach  for all to anon using (true) with check (true);
+create policy staff_leave_anon_all     on staff_leave     for all to anon using (true) with check (true);
 
 -- ── SEED YOUR FIRST ADMIN ─────────────────────────────────────────────────
 -- Uncomment and run (edit name/email first if this isn't you) — this is

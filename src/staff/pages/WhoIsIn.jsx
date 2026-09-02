@@ -11,8 +11,11 @@ import { useEffect, useState, useCallback } from "react";
 import { CGL } from "../../data/rooms.js";
 import { OFFICE_SITES } from "../../data/staff.js";
 import { listRows } from "../../lib/staffApi.js";
+import { formatDate } from "../../lib/helpers.js";
 import { initials } from "../lib/format.js";
-import EmailGate from "../components/EmailGate.jsx";
+import { useStaffUsers } from "../lib/useStaffUsers.js";
+import { useLeave } from "../lib/useLeave.js";
+import PinGate from "../components/PinGate.jsx";
 import PageWrap from "../components/PageWrap.jsx";
 
 function isOverdue(entry) {
@@ -71,20 +74,18 @@ function PersonRow({ name, meta, overdue }) {
 
 function WhoIsIn() {
   return (
-    <EmailGate
-      storageKey="ww_staff_who_email"
-      allow={() => true}
-      title="Who's in"
-      subtitle="Enter your work email to view live sign-in status."
-    >
-      {() => <WhoIsInBody />}
-    </EmailGate>
+    <PinGate storageKey="ww_staff_who_pin" title="Who's in" subtitle="Enter the access code to view live status.">
+      <WhoIsInBody />
+    </PinGate>
   );
 }
 
 function WhoIsInBody() {
   const { data, error, reload } = useLiveData();
+  const { users } = useStaffUsers();
+  const { onLeaveToday } = useLeave();
   const totalIn = data ? data.signIns.length + data.wfh.length + data.elsewhere.length + data.outreach.length : null;
+  const onLeave = onLeaveToday().map(l => ({ ...l, person: users.find(u => u.id === l.user_id) })).filter(l => l.person);
 
   return (
     <PageWrap title="Who's in" subtitle="Live view — refreshes automatically every 30 seconds." maxWidth={880}>
@@ -144,6 +145,15 @@ function WhoIsInBody() {
                   meta={[p.location, p.expected_return ? "back by " + p.expected_return : null].filter(Boolean).join(" · ")}
                 />
               ))}
+          </div>
+
+          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "10px 12px", background: "#faf8fc", display: "flex", justifyContent: "space-between" }}>
+              <strong style={{ fontSize: 13, color: CGL.amethyst }}>On leave today</strong><span style={{ fontSize: 12, color: "#6b7280" }}>{onLeave.length}</span>
+            </div>
+            {onLeave.length === 0
+              ? <div style={{ padding: 14, fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>Nobody</div>
+              : onLeave.map(l => <PersonRow key={l.id} name={l.person.name} meta={"until " + formatDate(l.end_date)} />)}
           </div>
         </div>
       )}

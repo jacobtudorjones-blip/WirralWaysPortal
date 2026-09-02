@@ -7,6 +7,7 @@ import Wfh from "./pages/Wfh.jsx";
 import Elsewhere from "./pages/Elsewhere.jsx";
 import Outreach from "./pages/Outreach.jsx";
 import WhoIsIn from "./pages/WhoIsIn.jsx";
+import Leave from "./pages/Leave.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import AdminUsers from "./pages/AdminUsers.jsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
@@ -26,6 +27,7 @@ function StaffApp() {
         <Route path="elsewhere" element={<Elsewhere />} />
         <Route path="outreach" element={<Outreach />} />
         <Route path="who" element={<WhoIsIn />} />
+        <Route path="leave" element={<Leave />} />
         <Route path="admin" element={<AdminDashboard />} />
         <Route path="admin/users" element={<AdminUsers />} />
         <Route path="privacy" element={<PrivacyPolicy />} />

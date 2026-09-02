@@ -28,4 +28,10 @@ const REMOTE_MODES = [
 // allows it could still call the API directly. See README for details.
 const ROLES = ["staff", "manager", "admin"];
 
-export { OFFICE_SITES, REMOTE_MODES, ROLES };
+// Full weekday names, Monday-first — used for the recurring
+// non_working_days pattern on a staff_users profile (e.g. a part-time
+// person who doesn't work Fridays). Distinct from staff_leave, which is
+// specific one-off date ranges, not a standing weekly pattern.
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+export { OFFICE_SITES, REMOTE_MODES, ROLES, WEEKDAYS };

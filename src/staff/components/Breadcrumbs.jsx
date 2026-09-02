@@ -11,6 +11,7 @@ const LABELS = {
   elsewhere: "Working elsewhere",
   outreach: "Outreach",
   who: "Who's in",
+  leave: "Leave & availability",
   admin: "Admin",
   users: "Manage users",
   privacy: "Privacy notice",

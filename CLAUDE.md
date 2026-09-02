@@ -100,21 +100,35 @@ plain JS (not TypeScript) project with no test suite yet.
   (`icsAttachment()` in App.jsx, built from `lib/ics.js`'s `buildICS()` —
   the same function the "📅 .ics" download button uses). Don't reintroduce
   `simulateEmail` in the booking flow.
-- `netlify/functions/manager-report.js` is a *scheduled* function (cron in
-  `netlify.toml`, fires every 15 min but self-gates to the 09:30
-  Europe/London window via `Intl` — see the file's comment for why not a
-  fixed UTC cron time). Emails each manager (`staff_users` rows that are
-  someone's `manager_id`) who's recorded in today across all four
-  attendance tables vs who isn't. If you change `REPORT_WINDOW_MINUTES` in
-  that file, update the matching cron interval in `netlify.toml` too, or
-  it'll fire more than once a day.
-- `/staff/who` (WhoIsIn.jsx) deliberately never shows sign-in/start times —
-  presence only. Times are admin-dashboard-only (AdminDashboard.jsx's log
-  table). The one exception is outreach's "back by" (expected_return) —
-  that's not when someone started, it's when they're due back, kept for
-  lone-working safety since the overdue flag depends on it. Don't add
-  `formatClock`/`formatElapsed` back into WhoIsIn.jsx without checking
-  this is still what's wanted.
+- `netlify/functions/manager-report.js` is a *scheduled* function
+  (`netlify.toml`'s cron is `*/15 8-10 * * *` — restricted to 8-10am UTC,
+  not all day, to avoid burning a function invocation every 15 minutes
+  around the clock; it still self-gates to the exact 09:30 Europe/London
+  window via `Intl` inside the function — see its comment for why not a
+  fixed UTC cron time). Only emails people with `role === 'manager'` —
+  having a direct report via `manager_id` isn't by itself enough. If you
+  change `REPORT_WINDOW_MINUTES` in that file, update both the cron
+  interval AND the 8-10 hour range in `netlify.toml` to match, or it'll
+  fire more than once a day (or miss the window entirely).
+- `/staff/who` (WhoIsIn.jsx) is **PIN-gated** (`PinGate.jsx`, code `886`),
+  not email-gated like the rest of the portal — matches the original
+  single-file app's design. It also deliberately never shows sign-in/start
+  times — presence only. Times are admin-dashboard-only
+  (AdminDashboard.jsx's log table). The one exception is outreach's "back
+  by" (expected_return) — that's not when someone started, it's when
+  they're due back, kept for lone-working safety since the overdue flag
+  depends on it. Don't add `formatClock`/`formatElapsed` back into
+  WhoIsIn.jsx without checking this is still what's wanted.
+- Leave (`staff_leave` table) and non-working days
+  (`staff_users.non_working_days`) are two different things, both
+  editable at `/staff/leave` — leave is one-off date ranges (annual
+  leave, sick, etc.); non-working days is a recurring weekly pattern on
+  the profile (e.g. `{'Fri'}` for someone who doesn't work Fridays).
+  `src/staff/lib/permissions.js`'s `canEditPerson()` is the shared rule
+  for who can edit whose record here (and reused nowhere else yet, but
+  written generically): self always, a manager for their direct reports
+  (`target.manager_id === current.id`), an admin for anyone. Same
+  client-side-only caveat as every other permission check in this app.
 - `hasConflict` (src/lib/helpers.js) only treats `status === "confirmed"`
   bookings as blocking — pending/cancelled/auto-released bookings are
   intentionally not conflict sources.

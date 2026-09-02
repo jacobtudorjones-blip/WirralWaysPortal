@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { to: "/staff/sign-in", label: "Sign in" },
   { to: "/staff/sign-out", label: "Sign out" },
   { to: "/staff/who", label: "Who's in" },
+  { to: "/staff/leave", label: "Leave" },
   { to: "/staff/admin", label: "Admin" },
 ];
 

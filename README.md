@@ -221,10 +221,19 @@ anon key is meant to be public as long as RLS is configured correctly (see
 
 **Pages:** `/staff` (home), `/staff/sign-in`, `/staff/sign-out`,
 `/staff/wfh`, `/staff/elsewhere`, `/staff/outreach`, `/staff/who` (live
-roll-call view), `/staff/admin` (dashboard, gated to `role IN ('admin',
-'manager')`), `/staff/admin/users` (add/edit/deactivate/delete staff,
-gated to `role = 'admin'`), `/staff/privacy` (what's recorded and why —
-linked from every form that collects a name/location/timestamp).
+roll-call view, **PIN-gated** — see below), `/staff/leave` (leave and
+non-working days — see below), `/staff/admin` (dashboard, gated to
+`role IN ('admin', 'manager')`), `/staff/admin/users` (add/edit/
+deactivate/delete staff, gated to `role = 'admin'`), `/staff/privacy`
+(what's recorded and why — linked from every form that collects a
+name/location/timestamp).
+
+**`/staff/who` is PIN-gated, not email-gated** — matches the original
+app's design (a shared access code in front of live location data, not
+an individual login). The code is `886` (`PinGate.jsx`) — same caveat as
+every other gate in this app: client-side, extractable from the shipped
+JS, a deterrent not real security. It also never shows sign-in/start
+times, only presence — see the note in CLAUDE.md.
 
 **Not a public site:** `public/robots.txt` disallows crawling entirely, and
 there's no analytics on either app — the Staff Portal specifically records
@@ -255,11 +264,27 @@ ambiguous reference is flagged in the preview and left unset rather than
 guessed. Parsed and previewed before inserting; re-pasting an updated
 list upserts by email rather than erroring on duplicates.
 
-**⚠️ Security model — no real authentication:** admin access and the
-"Who's in" gate check the entered email against `staff_users.role`
-client-side, the same pattern as `APPROVERS` in `src/data/rooms.js` for
-Room Booking approvers. It stops casual access through the UI, but not
-someone calling the Supabase REST API directly with the anon key (which
+**Leave & non-working days** (`/staff/leave`, email-gated like Admin —
+any registered active user can get in and manage their own): each person
+can record their own **non-working days** (a recurring weekly pattern —
+`staff_users.non_working_days`, e.g. `{'Fri'}` for someone who doesn't
+work Fridays — set directly on their profile, distinct from leave below)
+and their own **leave** (one-off date ranges — annual leave, sick, etc. —
+`staff_leave` table: `start_date`, `end_date`, optional `reason`).
+Managers additionally see and can edit this for their direct reports;
+admins see and can edit it for everyone — see `canEditPerson()` in
+`src/staff/lib/permissions.js`, the same self/manager/admin rule everyone
+else in this session's changes uses. Who's currently on leave is also
+shown read-only on `/staff/who`, so any staff member can see it without
+needing edit access.
+
+**⚠️ Security model — no real authentication:** admin access, `/staff/leave`,
+and the leave/non-working-days edit permissions all check the entered
+email against `staff_users.role`/`manager_id` client-side, the same
+pattern as `APPROVERS` in `src/data/rooms.js` for Room Booking approvers
+(`/staff/who` is different — see above, it's PIN-gated). It stops casual
+access through the UI, but not someone calling the Supabase REST API
+directly with the anon key (which
 ships in the bundle) — RLS is what actually protects the data, and the
 policies in `staff-portal-schema.sql` are deliberately permissive (any
 anon request can read/write) to keep the kiosk usable without a login

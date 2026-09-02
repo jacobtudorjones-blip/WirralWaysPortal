@@ -1,6 +1,9 @@
-// Scheduled function: sends every manager a morning attendance report of
-// their direct reports — who's recorded in today (site sign-in, WFH,
-// outreach, or working elsewhere) and who isn't yet.
+// Scheduled function: sends everyone with the "manager" role in the staff
+// directory a morning attendance report of their direct reports — who's
+// recorded in today (site sign-in, WFH, outreach, or working elsewhere)
+// and who isn't yet. Only role === "manager" gets a report — having a
+// direct report via manager_id isn't by itself enough (e.g. an admin
+// someone was mistakenly pointed at as a "manager" shouldn't get spammed).
 //
 // Runs every 15 minutes (see netlify.toml's schedule for this function),
 // but only actually does anything during the 09:30 Europe/London window —
@@ -88,7 +91,7 @@ export const handler = async () => {
 
   try {
     const [users, signIns, wfh, outreach, elsewhere] = await Promise.all([
-      sb("staff_users?select=id,name,email,manager_id&active=is.true&order=name.asc"),
+      sb("staff_users?select=id,name,email,manager_id,role&active=is.true&order=name.asc"),
       sb("staff_sign_ins?select=user_id&sign_in_time=gte." + since),
       sb("staff_wfh?select=user_id&start_time=gte." + since),
       sb("staff_outreach?select=user_id&start_time=gte." + since),
@@ -98,8 +101,10 @@ export const handler = async () => {
     const presentIds = new Set(
       [...signIns, ...wfh, ...outreach, ...elsewhere].map(r => r.user_id).filter(Boolean)
     );
-    const managerIds = new Set(users.map(u => u.manager_id).filter(Boolean));
-    const managers = users.filter(u => managerIds.has(u.id));
+    // Only people actually assigned the "manager" role get a report — not
+    // just anyone who happens to have a direct report via manager_id
+    // (e.g. an admin someone was mistakenly pointed at).
+    const managers = users.filter(u => u.role === "manager");
 
     let sent = 0;
     for (const manager of managers) {

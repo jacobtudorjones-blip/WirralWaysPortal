@@ -5,8 +5,12 @@
 [functions]
   directory = "netlify/functions"
 
-# manager-report checks the actual time itself (see the file) — the
-# schedule here just needs to run often enough to land inside its 15-minute
-# window once a day; it must match REPORT_WINDOW_MINUTES in that file.
+# manager-report checks the actual time itself (see the file) — this
+# schedule just needs to run often enough to land inside its 15-minute
+# window once a day (must match REPORT_WINDOW_MINUTES in that file).
+# Restricted to 8-10am UTC (not all day) to avoid burning a function
+# invocation every 15 minutes around the clock for no reason — that range
+# covers 09:30 Europe/London in both GMT (=09:30 UTC) and BST (=08:30 UTC)
+# with an hour's margin either side, cutting ~96 invocations/day to ~12.
 [functions."manager-report"]
-  schedule = "*/15 * * * *"
+  schedule = "*/15 8-10 * * *"
