@@ -1,17 +1,21 @@
 // Mass-add staff: paste a list (one person per line), preview what will be
-// created, then insert them all in one request. Upserts by email, so
-// re-pasting an updated list (e.g. someone's role or site changed) fixes
-// them up rather than erroring on duplicates — see useStaffUsers.bulkAddUsers.
+// created — including manager resolution — then insert them all in one
+// go. Upserts by email, so re-pasting an updated list (e.g. someone's
+// role or manager changed) fixes them up rather than erroring on
+// duplicates. Manager resolution happens server-side, after the real
+// insert, in useStaffUsers.bulkAddUsers — this component's preview is a
+// best-effort heads-up, not the final word (it can't see brand-new ids
+// that don't exist until the insert actually runs).
 import { useState } from "react";
 import { CGL } from "../../data/rooms.js";
-import { OFFICE_SITES, ROLES } from "../../data/staff.js";
+import { ROLES } from "../../data/staff.js";
 import { nameFromEmail } from "../../lib/nameFromEmail.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PLACEHOLDER = `One person per line: Name, email, site, role — site and role are optional (role defaults to "staff"). Or just paste an email on its own and the name is worked out automatically.
+const PLACEHOLDER = `One person per line: Name, email, manager, role — manager and role are optional (role defaults to "staff"). Manager can be their email (most reliable) or a name, either already in the directory or elsewhere in this same list. Or just paste a bare email and the name is worked out automatically.
 
-Jane Smith, jane.smith@cgl.org.uk, Market Street, staff
-Priya Patel, priya.patel@cgl.org.uk, Price Street, manager
+Priya Patel, priya.patel@cgl.org.uk, , manager
+Jane Smith, jane.smith@cgl.org.uk, priya.patel@cgl.org.uk, staff
 john.doe@cgl.org.uk`;
 
 function parseLine(line, lineNo) {
@@ -26,19 +30,31 @@ function parseLine(line, lineNo) {
   if (!name) name = nameFromEmail(email) || email.split("@")[0];
 
   const warnings = [];
-  let site = rest[0] || null;
-  if (site) {
-    const match = OFFICE_SITES.find(s => s.id.toLowerCase() === site.toLowerCase());
-    if (!match) { warnings.push('Unrecognised site "' + site + '" — left blank'); site = null; }
-    else site = match.id;
-  }
+  const managerRef = rest[0] || null;
   let role = (rest[1] || "staff").toLowerCase();
   if (!ROLES.includes(role)) { warnings.push('Unrecognised role "' + role + '" — set to staff'); role = "staff"; }
 
-  return { row: { name, email: email.toLowerCase(), site, role, active: true }, warnings, lineNo };
+  return { row: { name, email: email.toLowerCase(), role, active: true, managerRef }, warnings, lineNo };
 }
 
-function BulkAddUsersModal({ onSave, onClose }) {
+// Best-effort preview of whether a manager reference looks resolvable,
+// checking the existing directory plus everyone else in this same paste.
+function previewManager(ref, users, batchRows) {
+  if (ref.includes("@")) {
+    const found = users.some(u => u.email.toLowerCase() === ref.toLowerCase())
+      || batchRows.some(r => r.email.toLowerCase() === ref.toLowerCase());
+    return found ? null : 'manager email "' + ref + '" not found';
+  }
+  const names = [
+    ...users.filter(u => u.name.toLowerCase() === ref.toLowerCase()),
+    ...batchRows.filter(r => r.name.toLowerCase() === ref.toLowerCase()),
+  ];
+  if (names.length === 1) return null;
+  if (names.length === 0) return 'manager "' + ref + '" not found';
+  return 'manager name "' + ref + '" matches more than one person — use their email instead';
+}
+
+function BulkAddUsersModal({ users, onSave, onClose }) {
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -47,7 +63,11 @@ function BulkAddUsersModal({ onSave, onClose }) {
   const parsed = lines.map((l, i) => parseLine(l, i + 1));
   const validRows = parsed.filter(p => p.row).map(p => p.row);
   const errorLines = parsed.filter(p => p.error);
-  const warningLines = parsed.filter(p => p.row && p.warnings?.length);
+  const roleWarnings = parsed.filter(p => p.row && p.warnings?.length);
+  const managerWarnings = parsed
+    .filter(p => p.row?.managerRef)
+    .map(p => ({ lineNo: p.lineNo, issue: previewManager(p.row.managerRef, users, validRows) }))
+    .filter(w => w.issue);
 
   async function submit() {
     if (validRows.length === 0) return;
@@ -62,9 +82,9 @@ function BulkAddUsersModal({ onSave, onClose }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 100 }}>
-      <div style={{ background: "#fff", borderRadius: 16, padding: "24px 26px", maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "24px 26px", maxWidth: 580, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
         <h3 style={{ margin: "0 0 4px", color: CGL.blackcurrant }}>Bulk add users</h3>
-        <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px" }}>Manager assignment isn't supported here — add people first, then set their manager individually (Edit) once everyone's in.</p>
+        <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px" }}>Site isn't set in bulk — edit that individually afterward if needed.</p>
 
         <textarea
           value={text}
@@ -76,7 +96,7 @@ function BulkAddUsersModal({ onSave, onClose }) {
 
         {lines.length > 0 && (
           <div style={{ fontSize: 12, marginBottom: 14 }}>
-            <div style={{ color: "#16a34a", fontWeight: 700, marginBottom: errorLines.length || warningLines.length ? 6 : 0 }}>
+            <div style={{ color: "#16a34a", fontWeight: 700, marginBottom: (errorLines.length || roleWarnings.length || managerWarnings.length) ? 6 : 0 }}>
               {validRows.length} {validRows.length === 1 ? "person" : "people"} ready to add
             </div>
             {errorLines.length > 0 && (
@@ -84,9 +104,14 @@ function BulkAddUsersModal({ onSave, onClose }) {
                 {errorLines.map(e => <div key={e.error.lineNo}>Line {e.error.lineNo}: {e.error.reason} — "{e.error.line}"</div>)}
               </div>
             )}
-            {warningLines.length > 0 && (
+            {roleWarnings.length > 0 && (
+              <div style={{ color: "#b45309", marginBottom: 6 }}>
+                {roleWarnings.map(w => <div key={"role-"+w.lineNo}>Line {w.lineNo}: {w.warnings.join("; ")}</div>)}
+              </div>
+            )}
+            {managerWarnings.length > 0 && (
               <div style={{ color: "#b45309" }}>
-                {warningLines.map(w => <div key={w.lineNo}>Line {w.lineNo}: {w.warnings.join("; ")}</div>)}
+                {managerWarnings.map(w => <div key={"mgr-"+w.lineNo}>Line {w.lineNo}: {w.issue} — manager will be left unset</div>)}
               </div>
             )}
           </div>

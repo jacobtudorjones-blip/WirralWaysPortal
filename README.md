@@ -238,14 +238,22 @@ each user has a name, email, site, role (`staff`/`manager`/`admin`), and
 an optional **manager**, picked from the same directory (a
 self-referencing link — `staff_users.manager_id → staff_users.id`), so the
 manager relationship is real data, not free text, and stays consistent as
-people are added. **Bulk add** (same page) accepts a pasted list — one
-person per line, `Name, email, site, role` (site/role optional, or paste a
-bare email and the name is derived automatically) — parsed and previewed
-before inserting; re-pasting an updated list upserts by email rather than
-erroring on duplicates. Manager isn't set in bulk — add people first, then
-set managers individually once everyone's in. Adding someone with the
-`admin` role here also makes them a Room Booking approver (see
-`IdentityScreen.jsx`) — one directory, both apps.
+people are added. Adding someone with the `admin` role also makes them a
+Room Booking approver (see `IdentityScreen.jsx`) — one directory, both
+apps.
+
+**Bulk add** (same page) accepts a pasted list — one person per line,
+`Name, email, manager, role` (manager/role optional, or paste a bare
+email and the name is derived automatically). Site isn't set in bulk —
+edit that individually afterward if needed. **Manager** can be given as
+an email (most reliable) or a name, and is resolved after the real
+insert against the *full* directory as it then stands — including
+someone else earlier in the same paste (so you can paste a manager and
+their reports together in one go, in either order) — matching by exact
+email, or by name only when it's unambiguous; an unresolvable or
+ambiguous reference is flagged in the preview and left unset rather than
+guessed. Parsed and previewed before inserting; re-pasting an updated
+list upserts by email rather than erroring on duplicates.
 
 **⚠️ Security model — no real authentication:** admin access and the
 "Who's in" gate check the entered email against `staff_users.role`

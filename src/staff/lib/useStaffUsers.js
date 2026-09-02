@@ -41,8 +41,38 @@ function useStaffUsers() {
   }
   // Mass-add: upserts by email, so re-pasting a list updates existing
   // people (e.g. a role/manager change) instead of erroring on duplicates.
+  // rows: [{ name, email, role, active, managerRef? }] — managerRef (an
+  // email, or a name unique in the directory) is resolved to a real
+  // manager_id in a second pass, after the insert, against the full
+  // directory as it now stands — so a manager listed earlier in the same
+  // paste resolves correctly even though they didn't have an id yet when
+  // this batch was typed.
   async function bulkAddUsers(rows) {
-    const created = await insertRows("staff_users", rows, { onConflict: "email" });
+    const toInsert = rows.map(({ managerRef, ...r }) => r);
+    const created = await insertRows("staff_users", toInsert, { onConflict: "email" });
+    const createdByEmail = new Map(created.map(u => [u.email.toLowerCase(), u]));
+
+    const needsManager = rows.filter(r => r.managerRef && createdByEmail.has(r.email.toLowerCase()));
+    if (needsManager.length > 0) {
+      const all = await listRows("staff_users", "?select=id,name,email");
+      const idByEmail = new Map(all.map(u => [u.email.toLowerCase(), u.id]));
+      const idsByName = new Map();
+      for (const u of all) {
+        const key = u.name.toLowerCase();
+        idsByName.set(key, (idsByName.get(key) || []).concat(u.id));
+      }
+      const updates = [];
+      for (const r of needsManager) {
+        const self = createdByEmail.get(r.email.toLowerCase());
+        const ref = r.managerRef.trim().toLowerCase();
+        const managerId = ref.includes("@")
+          ? idByEmail.get(ref) || null
+          : (idsByName.get(ref) || []).length === 1 ? idsByName.get(ref)[0] : null;
+        if (managerId && managerId !== self.id) updates.push(updateRow("staff_users", self.id, { manager_id: managerId }));
+      }
+      await Promise.all(updates);
+    }
+
     await refresh();
     return created;
   }

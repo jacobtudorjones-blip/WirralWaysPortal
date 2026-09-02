@@ -115,7 +115,7 @@ function UsersBody() {
       )}
 
       {bulkOpen && (
-        <BulkAddUsersModal onSave={handleBulkSave} onClose={() => setBulkOpen(false)} />
+        <BulkAddUsersModal users={users} onSave={handleBulkSave} onClose={() => setBulkOpen(false)} />
       )}
 
       {confirmDelete && (
