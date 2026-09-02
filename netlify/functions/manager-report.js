@@ -28,10 +28,13 @@
 // specific report row here. That's expected, not a bug: user_id is what
 // makes a record attributable to a specific person.
 
+import { buildHtmlEmail } from "../../src/lib/emailHtml.js";
+
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 const BREVO_KEY = process.env.BREVO_API_KEY;
 const FROM = { name: "Wirral Ways Staff Portal", email: "noreply@wirralways.org.uk" };
+const WHO_URL = "https://portal.wirralways.org.uk/staff/who";
 const REPORT_HOUR = 9;
 const REPORT_MINUTE_START = 30;
 const REPORT_WINDOW_MINUTES = 15; // must match this function's cron schedule below
@@ -63,7 +66,7 @@ async function sendReport(to, subject, textContent) {
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: { "api-key": BREVO_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ sender: FROM, to: [{ email: to }], subject, textContent }),
+    body: JSON.stringify({ sender: FROM, to: [{ email: to }], subject, textContent, htmlContent: buildHtmlEmail(textContent, [{ label: "View live status", url: WHO_URL, color: "#5e1b6d" }]) }),
   });
   if (!res.ok) console.error("manager-report: Brevo rejected a report for", to, res.status, await res.text().catch(() => ""));
 }
@@ -124,7 +127,7 @@ export const handler = async () => {
         ...(notSignedIn.length ? notSignedIn.map(r => "  — " + r.name) : ["  (everyone's recorded)"]),
         "",
         '"Recorded" covers site sign-in, working from home, outreach, or working elsewhere.',
-        "Live view: https://portal.wirralways.org.uk/staff/who",
+        "Live view: " + WHO_URL,
       ].join("\n");
 
       await sendReport(manager.email, "Attendance report — " + today, lines);

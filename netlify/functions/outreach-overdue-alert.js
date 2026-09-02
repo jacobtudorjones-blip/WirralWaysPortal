@@ -15,10 +15,13 @@
 // directory — see manager-report.js's header comment for why no extra
 // env vars/credentials are needed.
 
+import { buildHtmlEmail } from "../../src/lib/emailHtml.js";
+
 const SB_URL = process.env.VITE_SUPABASE_URL;
 const SB_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 const BREVO_KEY = process.env.BREVO_API_KEY;
 const FROM = { name: "Wirral Ways Staff Portal", email: "noreply@wirralways.org.uk" };
+const WHO_URL = "https://portal.wirralways.org.uk/staff/who";
 const OVERDUE_AFTER_MINUTES = 15;
 
 // ── Europe/London-aware time math ───────────────────────────────────────
@@ -80,7 +83,7 @@ async function sendAlert(to, subject, textContent) {
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: { "api-key": BREVO_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ sender: FROM, to: [{ email: to }], subject, textContent }),
+    body: JSON.stringify({ sender: FROM, to: [{ email: to }], subject, textContent, htmlContent: buildHtmlEmail(textContent, [{ label: "View live status", url: WHO_URL, color: "#5e1b6d" }]) }),
   });
   if (!res.ok) console.error("outreach-overdue-alert: Brevo rejected an alert for", to, res.status, await res.text().catch(() => ""));
 }
@@ -115,7 +118,7 @@ export const handler = async () => {
         await sendAlert(
           manager.email,
           "Overdue from outreach — " + trip.name,
-          trip.name + " was due back from " + (trip.location || "outreach") + " " + mins + " minute" + (mins === 1 ? "" : "s") + " ago and hasn't signed back in.\n\nMake contact with them to check they are okay.\n\nLive view: https://portal.wirralways.org.uk/staff/who",
+          trip.name + " was due back from " + (trip.location || "outreach") + " " + mins + " minute" + (mins === 1 ? "" : "s") + " ago and hasn't signed back in.\n\nMake contact with them to check they are okay.\n\nLive view: " + WHO_URL,
         );
         sent++;
       }

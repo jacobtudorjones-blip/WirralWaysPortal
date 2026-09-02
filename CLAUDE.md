@@ -175,7 +175,21 @@ plain JS (not TypeScript) project with no test suite yet.
   `rooms.wirralways.org.uk` some of these email bodies used to reference
   — that subdomain never existed post-restructure (Room Booking lives at
   `/rooms` on the portal domain now, not its own subdomain); fix that
-  domain again if it resurfaces anywhere.
+  domain again if it resurfaces anywhere. `lib/emailHtml.js`'s
+  `buildHtmlEmail()` is shared by every emailer in the project, not just
+  Room Booking — `src/staff/lib/notify.js` (sign-in ack gets a "Sign in"
+  button; outreach start/return/overdue-alert get a "View live status"
+  button linking to `/staff/who`) and the two scheduled functions
+  (`manager-report.js`, `outreach-overdue-alert.js`, which import it
+  directly from `src/lib/` — Netlify's function bundler handles an import
+  reaching outside `netlify/functions/` fine, this isn't Vite-bundled)
+  both use it too. A plain URL typed into a `textContent`-only email body
+  doesn't render as a clickable link in every mail client (this was a
+  real complaint — Outlook showed a bare "Live view: https://…" string
+  with no link) — any new notification email should go through
+  `buildHtmlEmail()` and pass `htmlContent` as well as `textContent`,
+  not just concatenate a URL into the plain-text body and assume it's
+  clickable.
 - `netlify/functions/manager-report.js` is a *scheduled* function
   (`netlify.toml`'s cron is `*/15 8-10 * * *` — restricted to 8-10am UTC,
   not all day, to avoid burning a function invocation every 15 minutes
