@@ -93,6 +93,28 @@ plain JS (not TypeScript) project with no test suite yet.
   if the frontend ever moves to static-only hosting (one.com), this needs
   to move to something that still executes it (a Supabase Edge Function is
   the natural alternative).
+- Booking emails are real (`sendEmail`), not simulated — `App.jsx` used to
+  call a `simulateEmail()` that only logged to the console for every
+  request/confirmed/rejected/reminder/approver-notify email; that's gone.
+  A "confirmed" email also carries a `.ics` attachment
+  (`icsAttachment()` in App.jsx, built from `lib/ics.js`'s `buildICS()` —
+  the same function the "📅 .ics" download button uses). Don't reintroduce
+  `simulateEmail` in the booking flow.
+- `netlify/functions/manager-report.js` is a *scheduled* function (cron in
+  `netlify.toml`, fires every 15 min but self-gates to the 09:30
+  Europe/London window via `Intl` — see the file's comment for why not a
+  fixed UTC cron time). Emails each manager (`staff_users` rows that are
+  someone's `manager_id`) who's recorded in today across all four
+  attendance tables vs who isn't. If you change `REPORT_WINDOW_MINUTES` in
+  that file, update the matching cron interval in `netlify.toml` too, or
+  it'll fire more than once a day.
+- `/staff/who` (WhoIsIn.jsx) deliberately never shows sign-in/start times —
+  presence only. Times are admin-dashboard-only (AdminDashboard.jsx's log
+  table). The one exception is outreach's "back by" (expected_return) —
+  that's not when someone started, it's when they're due back, kept for
+  lone-working safety since the overdue flag depends on it. Don't add
+  `formatClock`/`formatElapsed` back into WhoIsIn.jsx without checking
+  this is still what's wanted.
 - `hasConflict` (src/lib/helpers.js) only treats `status === "confirmed"`
   bookings as blocking — pending/cancelled/auto-released bookings are
   intentionally not conflict sources.

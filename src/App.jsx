@@ -5,7 +5,8 @@ import { genId, norm, todayStr, nowStr, formatDate, formatDateShort, formatTime 
 import { slotToMins } from "./lib/slots.js";
 import { loadKey, saveKey } from "./lib/storage.js";
 import { addToWaitlist, notifyWaitlist } from "./lib/waitlist.js";
-import { simulateEmail } from "./lib/email.js";
+import { sendEmail } from "./lib/email.js";
+import { buildICS } from "./lib/ics.js";
 import { nameFromEmail } from "./lib/nameFromEmail.js";
 import { inp } from "./styles/shared.js";
 import IdentityScreen from "./components/IdentityScreen.jsx";
@@ -118,7 +119,7 @@ function App() {
       const updated = [...bookings];
       for(const b of due) {
         const email = buildEmail("reminder", b);
-        await simulateEmail(email.to, email.subject, email.body);
+        await sendEmail(email.to, email.subject, email.body, icsAttachment(b));
         const idx = updated.findIndex(x=>x.id===b.id);
         if(idx>=0) updated[idx] = {...updated[idx], reminderSent:true, reminderSentAt:nowStr()};
       }
@@ -217,6 +218,13 @@ function App() {
     });
   }
 
+  // UTF-8-safe base64 for the .ics attachment — btoa() alone only handles
+  // Latin1, and booking titles/notes can contain non-ASCII characters.
+  function icsAttachment(booking) {
+    const ics = buildICS(booking);
+    return { name: "booking.ics", content: btoa(unescape(encodeURIComponent(ics))) };
+  }
+
   function buildEmail(type, booking) {
     const room = ROOMS[booking.roomId];
     const detail = "Room: " + room.name + " (" + room.site + ")\nDate: " + formatDate(booking.date) + "\nTime: " + formatTime(booking.startTime) + " – " + formatTime(booking.endTime) + "\nPurpose: " + booking.title;
@@ -290,11 +298,11 @@ function App() {
     setShowForm(false);
     const emailType = autoApprove ? "confirmed" : "requested";
     const notifyEmail = buildEmail(emailType, newBookings[0]);
-    simulateEmail(notifyEmail.to, notifyEmail.subject, notifyEmail.body);
+    sendEmail(notifyEmail.to, notifyEmail.subject, notifyEmail.body, notifyEmail.type==="confirmed" ? icsAttachment(newBookings[0]) : undefined);
     // Only notify approvers if this wasn't auto-approved
     if(!autoApprove){
       const approverEmail = buildEmail("approver_notify", newBookings[0]);
-      simulateEmail(approverEmail.to, approverEmail.subject, approverEmail.body);
+      sendEmail(approverEmail.to, approverEmail.subject, approverEmail.body);
     }
     setEmailPreview(notifyEmail);
   }
@@ -333,7 +341,7 @@ function App() {
     persistB(bookings.map(bk=>bk.id===id?updated:bk));
     addAudit("booking_approved", user.name + " approved \"" + b.title + "\" — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name);
     const email=buildEmail("confirmed",updated);
-    simulateEmail(email.to,email.subject,email.body);
+    sendEmail(email.to,email.subject,email.body,icsAttachment(updated));
     setEmailPreview(email);
   }
 
@@ -343,7 +351,7 @@ function App() {
     persistB(bookings.map(bk=>bk.id===id?updated:bk));
     addAudit("booking_rejected", user.name + " rejected \"" + b.title + "\" — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name, note||null);
     const email=buildEmail("rejected",updated);
-    simulateEmail(email.to,email.subject,email.body);
+    sendEmail(email.to,email.subject,email.body);
     setEmailPreview(email);
   }
 

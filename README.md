@@ -122,6 +122,30 @@ if the frontend ever moves there, this function needs to move to something
 that still executes it (a Supabase Edge Function is the natural
 host-agnostic alternative).
 
+**Booking emails are real, not simulated.** Room Booking sends an actual
+email (via the function above) for every request/confirmation/rejection/
+next-day reminder, and notifies the approver list on a new request. A
+confirmation or reminder also attaches a `.ics` calendar invite (built by
+`src/lib/ics.js`, the same code behind the "📅 .ics" download button on
+each booking card). This used to go through a `simulateEmail()` that only
+logged to the console — worth knowing if you're wondering why nobody
+seemed to be getting emails before.
+
+**Manager attendance reports.** `netlify/functions/manager-report.js` is a
+*scheduled* function (see `netlify.toml`) that emails every manager (any
+`staff_users` row that's someone's `manager_id`) a plain-text list of
+their direct reports who have/haven't been recorded today — covering
+site sign-in, WFH, outreach, or working elsewhere, not just physical
+sign-in. It runs every 15 minutes but only acts during the 09:30
+Europe/London window, checked with `Intl` rather than a fixed UTC cron
+time, so it stays correct across the BST/GMT clock change. Needs no new
+env vars (reuses `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`/
+`BREVO_API_KEY` — Netlify exposes all site env vars to functions
+regardless of the `VITE_` prefix, that prefix only controls what Vite
+inlines into the *client* bundle). Depends entirely on managers being set
+up correctly via `/staff/admin/users` — nobody gets a report until at
+least one person has a `manager_id` pointing at them.
+
 **Still open, not fixed by the above:** admin/approver access on both apps
 (`APPROVERS` in `src/data/rooms.js`, `role` on `staff_users`) is still a
 client-side email check, not real authentication — seeing the check pass
@@ -138,6 +162,7 @@ public/_redirects     Netlify SPA fallback (all paths → index.html)
 public/robots.txt     Disallows all crawling — internal tool, not meant to be indexed
 netlify/functions/
   send-email.js        Brevo proxy — holds BREVO_API_KEY server-side, called from src/lib/email.js
+  manager-report.js     Scheduled (netlify.toml) — 9:30am Europe/London manager attendance emails
 supabase/
   staff-portal-schema.sql   Staff Portal tables + RLS policies — run once per Supabase project
 src/
@@ -154,7 +179,7 @@ src/
     storage.js           Supabase load/save (Room Booking's ww_bookings)
     staffApi.js           Supabase REST CRUD for any staff_* table
     waitlist.js           waitlist load/save/notify
-    email.js               Brevo send + dev-only email simulation
+    email.js               Brevo send (via the Netlify Function above)
     ics.js                  .ics calendar file export
     slots.js                 30-minute time-slot helpers
     nameFromEmail.js          parses a display name from a CGL email

@@ -4,3 +4,9 @@
 
 [functions]
   directory = "netlify/functions"
+
+# manager-report checks the actual time itself (see the file) — the
+# schedule here just needs to run often enough to land inside its 15-minute
+# window once a day; it must match REPORT_WINDOW_MINUTES in that file.
+[functions."manager-report"]
+  schedule = "*/15 * * * *"

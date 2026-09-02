@@ -1,11 +1,17 @@
 // Live "who's in" view for roll call / emergency evacuation and for
 // general "is X in today" lookups. Groups everyone currently signed in,
 // working from home, working elsewhere, or on outreach.
+//
+// Deliberately shows presence only, never sign-in/start times — those are
+// admin-dashboard-only (see AdminDashboard.jsx's log table). The one
+// exception is outreach's "back by" time, which isn't when someone
+// started, it's when they're expected back — kept for lone-working safety
+// (the overdue flag depends on it).
 import { useEffect, useState, useCallback } from "react";
 import { CGL } from "../../data/rooms.js";
 import { OFFICE_SITES } from "../../data/staff.js";
 import { listRows } from "../../lib/staffApi.js";
-import { formatClock, formatElapsed, initials } from "../lib/format.js";
+import { initials } from "../lib/format.js";
 import EmailGate from "../components/EmailGate.jsx";
 import PageWrap from "../components/PageWrap.jsx";
 
@@ -55,7 +61,9 @@ function PersonRow({ name, meta, overdue }) {
       }}>{initials(name)}</span>
       <span style={{ flex: 1 }}>
         <div style={{ fontWeight: 700, fontSize: 13 }}>{name}</div>
-        <div style={{ fontSize: 11, color: overdue ? "#c0392b" : "#6b7280", fontWeight: overdue ? 700 : 400 }}>{overdue ? "⚠ Overdue — " : ""}{meta}</div>
+        {(overdue || meta) && (
+          <div style={{ fontSize: 11, color: overdue ? "#c0392b" : "#6b7280", fontWeight: overdue ? 700 : 400 }}>{overdue ? "⚠ Overdue — " : ""}{meta}</div>
+        )}
       </span>
     </div>
   );
@@ -99,7 +107,7 @@ function WhoIsInBody() {
                 </div>
                 {people.length === 0
                   ? <div style={{ padding: 14, fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>Nobody signed in</div>
-                  : people.map(p => <PersonRow key={p.id} name={p.name} meta={"in since " + formatClock(p.sign_in_time) + " (" + formatElapsed(p.sign_in_time) + ")"} />)}
+                  : people.map(p => <PersonRow key={p.id} name={p.name} />)}
               </div>
             );
           })}
@@ -110,7 +118,7 @@ function WhoIsInBody() {
             </div>
             {data.wfh.length === 0
               ? <div style={{ padding: 14, fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>Nobody</div>
-              : data.wfh.map(p => <PersonRow key={p.id} name={p.name} meta={"since " + formatClock(p.start_time)} />)}
+              : data.wfh.map(p => <PersonRow key={p.id} name={p.name} />)}
           </div>
 
           <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
@@ -119,7 +127,7 @@ function WhoIsInBody() {
             </div>
             {data.elsewhere.length === 0
               ? <div style={{ padding: 14, fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>Nobody</div>
-              : data.elsewhere.map(p => <PersonRow key={p.id} name={p.name} meta={(p.location ? p.location + " · " : "") + "since " + formatClock(p.start_time)} />)}
+              : data.elsewhere.map(p => <PersonRow key={p.id} name={p.name} meta={p.location || ""} />)}
           </div>
 
           <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
@@ -133,7 +141,7 @@ function WhoIsInBody() {
                   key={p.id}
                   name={p.name}
                   overdue={isOverdue(p)}
-                  meta={(p.location ? p.location + " · " : "") + "left " + formatClock(p.start_time) + (p.expected_return ? " · back by " + p.expected_return : "")}
+                  meta={[p.location, p.expected_return ? "back by " + p.expected_return : null].filter(Boolean).join(" · ")}
                 />
               ))}
           </div>

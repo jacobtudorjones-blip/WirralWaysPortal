@@ -18,13 +18,17 @@
 //
 // No authentication here (same as every other write in this app — see the
 // README's security notes), so this is deliberately narrow: one hardcoded
-// sender, one recipient per call, and small size limits, so at worst it's
-// usable to send a normal-sized email as this account — not as an open
-// relay for arbitrary bulk mail or a spoofed sender.
+// sender, a bounded number of recipients (comma-separated — used for
+// notifying the small APPROVERS list), a size-capped optional attachment
+// (booking .ics files only, in practice), so at worst it's usable to send
+// a normal-sized email as this account — not as an open relay for
+// arbitrary bulk mail, a spoofed sender, or large file hosting.
 
 const BREVO_KEY = process.env.BREVO_API_KEY;
 const FROM = { name: "Wirral Ways Room Booking", email: "rooms@wirralways.org.uk" };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_RECIPIENTS = 25;
+const MAX_ATTACHMENT_B64 = 100000; // ~75KB decoded — generous for a booking .ics, nowhere near "file hosting"
 
 // ESM export, not `exports.handler` — this repo's package.json sets
 // "type": "module", so a CommonJS `exports.handler` here would fail at
@@ -47,10 +51,19 @@ export const handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
   }
 
-  const { to, subject, textContent } = payload;
-  if (typeof to !== "string" || !EMAIL_RE.test(to)) {
-    return { statusCode: 400, body: JSON.stringify({ error: "A valid single recipient email is required" }) };
+  const { to, subject, textContent, attachment } = payload;
+
+  // `to` is usually a single address, but the room-booking approver
+  // notification sends to the whole (short) APPROVERS list as one
+  // comma-separated string — split and validate each address.
+  if (typeof to !== "string") {
+    return { statusCode: 400, body: JSON.stringify({ error: "to is required" }) };
   }
+  const recipients = to.split(",").map(s => s.trim()).filter(Boolean);
+  if (recipients.length === 0 || recipients.length > MAX_RECIPIENTS || !recipients.every(r => EMAIL_RE.test(r))) {
+    return { statusCode: 400, body: JSON.stringify({ error: "to must be 1–" + MAX_RECIPIENTS + " valid, comma-separated email addresses" }) };
+  }
+
   if (typeof subject !== "string" || !subject.trim() || subject.length > 200) {
     return { statusCode: 400, body: JSON.stringify({ error: "subject is required (max 200 chars)" }) };
   }
@@ -58,11 +71,29 @@ export const handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "textContent is required (max 20000 chars)" }) };
   }
 
+  let attachments;
+  if (attachment != null) {
+    const { name, content } = attachment;
+    if (typeof name !== "string" || !/^[A-Za-z0-9._-]{1,100}$/.test(name)) {
+      return { statusCode: 400, body: JSON.stringify({ error: "attachment.name must be a plain filename" }) };
+    }
+    if (typeof content !== "string" || !content || content.length > MAX_ATTACHMENT_B64) {
+      return { statusCode: 400, body: JSON.stringify({ error: "attachment.content must be base64 (max " + MAX_ATTACHMENT_B64 + " chars)" }) };
+    }
+    attachments = [{ name, content }];
+  }
+
   try {
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: { "api-key": BREVO_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({ sender: FROM, to: [{ email: to }], subject, textContent }),
+      body: JSON.stringify({
+        sender: FROM,
+        to: recipients.map(email => ({ email })),
+        subject,
+        textContent,
+        ...(attachments ? { attachment: attachments } : {}),
+      }),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");

@@ -6,12 +6,14 @@
 // dev tools on the deployed site. Now the browser only ever talks to
 // /.netlify/functions/send-email, which is same-origin and needs no key.
 
-async function sendEmail(to, subject, bodyText) {
+// attachment (optional): { name: "booking.ics", content: "<base64>" } —
+// see App.jsx's icsAttachment() helper for how the calendar invite gets built.
+async function sendEmail(to, subject, bodyText, attachment) {
   try {
     const res = await fetch("/.netlify/functions/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, subject, textContent: bodyText }),
+      body: JSON.stringify({ to, subject, textContent: bodyText, attachment: attachment || undefined }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
