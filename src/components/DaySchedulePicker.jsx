@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CGL, ROOMS } from "../data/rooms.js";
+import { formatTime } from "../lib/helpers.js";
 import { SLOTS, slotToMins, minsToSlot } from "../lib/slots.js";
 import { lbl } from "../styles/shared.js";
 
