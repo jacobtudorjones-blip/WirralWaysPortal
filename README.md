@@ -199,8 +199,9 @@ src/
                            AdminUsers, PrivacyPolicy
     lib/                  useStaffUsers (directory hook), useLeave,
                            permissions (canEditPerson), attendance
-                           (closeAnyOpenRecordForUser), identity.js (admin
-                           session), format.js (elapsed time, etc.),
+                           (closeAnyOpenRecordForUser), notify (sign-in ack
+                           + visitor host notification emails), identity.js
+                           (admin session), format.js (elapsed time, etc.),
                            useDocumentTitle (per-page browser tab title)
 ```
 
@@ -254,6 +255,20 @@ can't be linked across tables. The dedicated `/staff/wfh` etc. pages'
 "Finishing" tab is still the only way to end one of those without
 starting something else. `/staff/sign-out`'s confirmation screen also
 links straight to `/staff/sign-in` ("Sign in somewhere else").
+
+**"I am a…" (office-site sign-ins only)** is `staff` or `visitor` — no
+"service user" any more. Picking a name that matches the directory
+defaults this to `staff` automatically. If it doesn't match and `staff`
+is picked anyway, a prompt offers to add that person to the directory
+right there (email + manager, `useStaffUsers.addUser` under the hood) —
+site is pre-filled from wherever they're signing in. Picking `visitor`
+asks who they're here to see (another `NamePicker`, must resolve to a
+real directory entry since we need a real email) and, on sign-in, emails
+that person a heads-up (`lib/notify.js`'s `sendVisitorNotification`).
+Anyone we have an email for — matched, or just self-registered — also
+gets a sign-in confirmation email (`sendSignInAck`, same file), from
+every entry point (unified Sign In and each dedicated Wfh/Elsewhere/
+Outreach page's "Starting" tab).
 
 **`/staff/who` is PIN-gated, not email-gated** — matches the original
 app's design (a shared access code in front of live location data, not

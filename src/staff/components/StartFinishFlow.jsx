@@ -10,6 +10,7 @@ import { inp, lbl } from "../../styles/shared.js";
 import { insertRow, listRows, updateRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { closeAnyOpenRecordForUser } from "../lib/attendance.js";
+import { sendSignInAck } from "../lib/notify.js";
 import { formatElapsed, formatClock, initials } from "../lib/format.js";
 import NamePicker from "./NamePicker.jsx";
 import PageWrap from "./PageWrap.jsx";
@@ -44,6 +45,8 @@ function StartFinishFlow({ table, title, subtitle, color, fields = [] }) {
     try {
       if (userId) await closeAnyOpenRecordForUser(userId);
       await insertRow(table, { name: name.trim(), user_id: userId, notes: notes.trim() || null, start_time: new Date().toISOString(), ...extra });
+      const self = userId ? activeUsers.find(u => u.id === userId) : null;
+      if (self) sendSignInAck(self.email, name.trim(), title);
       setDone({ kind: "start", name: name.trim() });
       setName(""); setUserId(null); setExtra({}); setNotes("");
     } catch (err) { setError(err.message || String(err)); }

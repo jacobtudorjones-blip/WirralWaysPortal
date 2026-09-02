@@ -125,6 +125,19 @@ plain JS (not TypeScript) project with no test suite yet.
   between two office sites both use `staff_sign_ins`, so skipping it
   meant the *old* site's record was never found. It's safe unconditional
   precisely because it always runs before the insert.
+- "I am a…" on office-site sign-ins is `staff`/`visitor` only (no
+  "service user"). `SignIn.jsx` defaults it to `staff` whenever the
+  NamePicker resolves a real `userId`; an unmatched name + `staff` shows
+  an inline "add to the directory" mini-form that calls
+  `useStaffUsers.addUser` directly from the sign-in flow — the created
+  user's id becomes the sign-in record's `user_id`. `visitor` requires
+  picking a real directory entry as the host (a second `NamePicker`) —
+  submit is blocked without one, since `lib/notify.js`'s
+  `sendVisitorNotification` needs a real email. Every entry point that
+  can resolve an email for the person signing in (matched, or
+  self-registered) also fires `sendSignInAck` — both live in
+  `src/staff/lib/notify.js`, wired into `SignIn.jsx` and
+  `StartFinishFlow.jsx`'s `submitStart`.
 - `/staff/who` (WhoIsIn.jsx) is **PIN-gated** (`PinGate.jsx`, code `886`),
   not email-gated like the rest of the portal — matches the original
   single-file app's design. It also deliberately never shows sign-in/start
