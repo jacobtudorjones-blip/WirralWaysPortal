@@ -110,6 +110,21 @@ plain JS (not TypeScript) project with no test suite yet.
   change `REPORT_WINDOW_MINUTES` in that file, update both the cron
   interval AND the 8-10 hour range in `netlify.toml` to match, or it'll
   fire more than once a day (or miss the window entirely).
+- `/staff/sign-in` is unified across office sites and remote modes
+  (`REMOTE_MODES` in `data/staff.js` now carries a `table` field —
+  `staff_wfh`/`staff_elsewhere`/`staff_outreach` — that's what SignIn.jsx
+  branches on; office sites have no `table`, meaning `staff_sign_ins`).
+  Every "start" action (unified SignIn, and each dedicated Wfh/Elsewhere/
+  Outreach page's own "Starting" tab in StartFinishFlow.jsx) calls
+  `lib/attendance.js`'s `closeAnyOpenRecordForUser(userId)` **before**
+  inserting the new record — it checks all four attendance tables
+  unconditionally and closes whichever one has an open record for that
+  user, enforcing "signed in one place at a time". Call it with no
+  `exceptTable`-style exclusion — an earlier version tried to skip the
+  destination table "to be safe" and that was a real bug: switching
+  between two office sites both use `staff_sign_ins`, so skipping it
+  meant the *old* site's record was never found. It's safe unconditional
+  precisely because it always runs before the insert.
 - `/staff/who` (WhoIsIn.jsx) is **PIN-gated** (`PinGate.jsx`, code `886`),
   not email-gated like the rest of the portal — matches the original
   single-file app's design. It also deliberately never shows sign-in/start
@@ -145,6 +160,16 @@ plain JS (not TypeScript) project with no test suite yet.
   (`/staff/admin/users` → Bulk add) also grants Room Booking approver
   rights — that's the intended "one directory, both apps" behaviour, not
   a bug if someone added there shows up as an approver here too.
+- `useStaffUsers.bulkAddUsers` (`/staff/admin/users` → Bulk add) skips
+  any row whose email already exists in the directory — never upserts
+  over an existing person. This was a real incident, not theoretical: an
+  earlier version upserted by email (`onConflict: "email"`), so
+  re-pasting a list that happened to include an existing person's email
+  — e.g. an admin including themselves in a team list without explicitly
+  writing `admin` as their role — silently overwrote their role back to
+  the default (`staff`), locking them out of `/staff/admin/users`.
+  Never reintroduce an upsert in bulk-add; skip-if-exists is the
+  intended, permanent behaviour, not a temporary workaround.
 - The original uploaded single-file version of the Staff Portal had a
   Supabase **service-role key hardcoded in a PHP proxy** and a hardcoded
   admin password in client JS. Neither was carried over — that service-role

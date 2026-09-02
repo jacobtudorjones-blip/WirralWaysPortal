@@ -34,8 +34,7 @@ function UsersBody() {
     setModal(null);
   }
   async function handleBulkSave(rows) {
-    await bulkAddUsers(rows);
-    setBulkOpen(false);
+    return bulkAddUsers(rows); // { created, skipped } — modal shows the result and closes itself
   }
 
   const filtered = users.filter(u =>

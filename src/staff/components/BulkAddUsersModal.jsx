@@ -1,9 +1,10 @@
 // Mass-add staff: paste a list (one person per line), preview what will be
 // created — including manager resolution — then insert them all in one
-// go. Upserts by email, so re-pasting an updated list (e.g. someone's
-// role or manager changed) fixes them up rather than erroring on
-// duplicates. Manager resolution happens server-side, after the real
-// insert, in useStaffUsers.bulkAddUsers — this component's preview is a
+// go. Only adds genuinely NEW people — anyone whose email already exists
+// is skipped entirely, never touched (see useStaffUsers.bulkAddUsers for
+// why: an earlier version upserted over existing rows, which is how an
+// admin got their own role silently reset). Manager resolution happens
+// server-side, after the real insert; this component's preview is a
 // best-effort heads-up, not the final word (it can't see brand-new ids
 // that don't exist until the insert actually runs).
 import { useState } from "react";
@@ -58,14 +59,18 @@ function BulkAddUsersModal({ users, onSave, onClose }) {
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [result, setResult] = useState(null); // { created, skipped } after a successful submit
 
+  const existingEmails = new Set(users.map(u => u.email.toLowerCase()));
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
   const parsed = lines.map((l, i) => parseLine(l, i + 1));
-  const validRows = parsed.filter(p => p.row).map(p => p.row);
+  const allRows = parsed.filter(p => p.row).map(p => p.row);
+  const alreadyExists = allRows.filter(r => existingEmails.has(r.email));
+  const validRows = allRows.filter(r => !existingEmails.has(r.email));
   const errorLines = parsed.filter(p => p.error);
   const roleWarnings = parsed.filter(p => p.row && p.warnings?.length);
   const managerWarnings = parsed
-    .filter(p => p.row?.managerRef)
+    .filter(p => p.row?.managerRef && !existingEmails.has(p.row.email))
     .map(p => ({ lineNo: p.lineNo, issue: previewManager(p.row.managerRef, users, validRows) }))
     .filter(w => w.issue);
 
@@ -73,18 +78,38 @@ function BulkAddUsersModal({ users, onSave, onClose }) {
     if (validRows.length === 0) return;
     setSaving(true); setError(null);
     try {
-      await onSave(validRows);
+      const r = await onSave(validRows);
+      setResult(r || { created: validRows, skipped: [] });
     } catch (err) {
       setError(err.message || String(err));
       setSaving(false);
     }
   }
 
+  if (result) {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 100 }}>
+        <div style={{ background: "#fff", borderRadius: 16, padding: "24px 26px", maxWidth: 420, width: "100%", textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, margin: "0 auto 12px" }}>✅</div>
+          <h3 style={{ margin: "0 0 8px", color: CGL.blackcurrant }}>
+            {result.created.length} {result.created.length === 1 ? "person" : "people"} added
+          </h3>
+          {result.skipped.length > 0 && (
+            <p style={{ fontSize: 12, color: "#b45309", textAlign: "left", background: "#fffbeb", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+              {result.skipped.length} already existed and {result.skipped.length === 1 ? "was" : "were"} left untouched: {result.skipped.map(s => s.name).join(", ")}. Edit them individually if something needs to change.
+            </p>
+          )}
+          <button onClick={onClose} style={{ background: CGL.blackcurrant, color: "#fff", border: "none", borderRadius: 10, padding: "10px 24px", fontWeight: 700, cursor: "pointer" }}>Done</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 100 }}>
       <div style={{ background: "#fff", borderRadius: 16, padding: "24px 26px", maxWidth: 580, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
         <h3 style={{ margin: "0 0 4px", color: CGL.blackcurrant }}>Bulk add users</h3>
-        <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px" }}>Site isn't set in bulk — edit that individually afterward if needed.</p>
+        <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 14px" }}>Adds new people only — anyone already in the directory is skipped, never edited. Site isn't set in bulk either — edit that individually afterward if needed.</p>
 
         <textarea
           value={text}
@@ -96,9 +121,14 @@ function BulkAddUsersModal({ users, onSave, onClose }) {
 
         {lines.length > 0 && (
           <div style={{ fontSize: 12, marginBottom: 14 }}>
-            <div style={{ color: "#16a34a", fontWeight: 700, marginBottom: (errorLines.length || roleWarnings.length || managerWarnings.length) ? 6 : 0 }}>
+            <div style={{ color: "#16a34a", fontWeight: 700, marginBottom: (errorLines.length || roleWarnings.length || managerWarnings.length || alreadyExists.length) ? 6 : 0 }}>
               {validRows.length} {validRows.length === 1 ? "person" : "people"} ready to add
             </div>
+            {alreadyExists.length > 0 && (
+              <div style={{ color: "#b45309", marginBottom: 6 }}>
+                {alreadyExists.map(r => <div key={r.email}>{r.name} ({r.email}) already exists — will be skipped, untouched</div>)}
+              </div>
+            )}
             {errorLines.length > 0 && (
               <div style={{ color: CGL.neon, marginBottom: 6 }}>
                 {errorLines.map(e => <div key={e.error.lineNo}>Line {e.error.lineNo}: {e.error.reason} — "{e.error.line}"</div>)}

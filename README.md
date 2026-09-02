@@ -160,6 +160,7 @@ here rather than silently left out.
 index.html            Vite entry HTML
 public/_redirects     Netlify SPA fallback (all paths → index.html)
 public/robots.txt     Disallows all crawling — internal tool, not meant to be indexed
+public/sites/          Site photos, if any (see the Staff Portal section below) — none ship by default
 netlify/functions/
   send-email.js        Brevo proxy — holds BREVO_API_KEY server-side, called from src/lib/email.js
   manager-report.js     Scheduled (netlify.toml) — 9:30am Europe/London manager attendance emails
@@ -188,13 +189,18 @@ src/
   staff/               Staff Portal — see below
     StaffApp.jsx         route table, mounted at /staff/*
     components/          StaffLayout (header/nav/breadcrumbs), NamePicker,
-                          EmailGate, UserFormModal, BulkAddUsersModal,
-                          StartFinishFlow (shared WFH/outreach/elsewhere
-                          UI), PageWrap, PrivacyNote, Breadcrumbs
-    pages/                Home, SignIn, SignOut, Wfh, Elsewhere, Outreach,
-                           WhoIsIn, AdminDashboard, AdminUsers, PrivacyPolicy
-    lib/                  useStaffUsers (directory hook), identity.js
-                           (admin session), format.js (elapsed time, etc.),
+                          EmailGate, PinGate (used by WhoIsIn), UserFormModal,
+                          BulkAddUsersModal, StartFinishFlow (shared WFH/
+                          outreach/elsewhere UI), SiteTile (site photo +
+                          fallback), PersonAvailabilityCard (leave UI),
+                          PageWrap, PrivacyNote, Breadcrumbs
+    pages/                Home, SignIn (unified), SignOut, Wfh, Elsewhere,
+                           Outreach, WhoIsIn, Leave, AdminDashboard,
+                           AdminUsers, PrivacyPolicy
+    lib/                  useStaffUsers (directory hook), useLeave,
+                           permissions (canEditPerson), attendance
+                           (closeAnyOpenRecordForUser), identity.js (admin
+                           session), format.js (elapsed time, etc.),
                            useDocumentTitle (per-page browser tab title)
 ```
 
@@ -219,14 +225,35 @@ anon key is meant to be public as long as RLS is configured correctly (see
    service-role key, **rotate it** in Project Settings → API — that key
    bypassed RLS entirely and must be treated as compromised.
 
-**Pages:** `/staff` (home), `/staff/sign-in`, `/staff/sign-out`,
-`/staff/wfh`, `/staff/elsewhere`, `/staff/outreach`, `/staff/who` (live
-roll-call view, **PIN-gated** — see below), `/staff/leave` (leave and
-non-working days — see below), `/staff/admin` (dashboard, gated to
-`role IN ('admin', 'manager')`), `/staff/admin/users` (add/edit/
-deactivate/delete staff, gated to `role = 'admin'`), `/staff/privacy`
-(what's recorded and why — linked from every form that collects a
-name/location/timestamp).
+**Pages:** `/staff` (home), `/staff/sign-in` (unified — see below),
+`/staff/sign-out`, `/staff/wfh`, `/staff/elsewhere`, `/staff/outreach`
+(these three still exist for *finishing* one without starting something
+new — see below), `/staff/who` (live roll-call view, **PIN-gated** — see
+below), `/staff/leave` (leave and non-working days — see below),
+`/staff/admin` (dashboard, gated to `role IN ('admin', 'manager')`),
+`/staff/admin/users` (add/edit/deactivate/delete staff, gated to
+`role = 'admin'`), `/staff/privacy` (what's recorded and why — linked
+from every form that collects a name/location/timestamp).
+
+**`/staff/sign-in` is unified** — one screen offering the four office
+sites *and* Working From Home / Working Elsewhere / Outreach as equal
+"where are you" options (previously WFH/elsewhere/outreach were only
+reachable from separate buttons/pages). Site tiles show a photo if one
+exists at `public/sites/<slugified-site-name>.jpg` (none ship with this
+repo — drop real photos in using that naming and they appear
+automatically; `SiteTile.jsx` falls back to a plain colour badge
+otherwise, not an error). Signing in anywhere **auto-closes any other
+open record** this person has first (`lib/attendance.js`'s
+`closeAnyOpenRecordForUser()`, checked across all four attendance
+tables) — so someone signed in at Price Street who signs in at Market
+Street (or starts WFH, etc.) gets automatically signed out of Price
+Street first, rather than appearing in two places at once. Only works
+for a matched `user_id` (picked from the NamePicker) — a free-typed name
+can't be linked across tables. The dedicated `/staff/wfh` etc. pages'
+"Starting" tab does the same auto-close for consistency; their
+"Finishing" tab is still the only way to end one of those without
+starting something else. `/staff/sign-out`'s confirmation screen also
+links straight to `/staff/sign-in` ("Sign in somewhere else").
 
 **`/staff/who` is PIN-gated, not email-gated** — matches the original
 app's design (a shared access code in front of live location data, not
@@ -261,8 +288,13 @@ someone else earlier in the same paste (so you can paste a manager and
 their reports together in one go, in either order) — matching by exact
 email, or by name only when it's unambiguous; an unresolvable or
 ambiguous reference is flagged in the preview and left unset rather than
-guessed. Parsed and previewed before inserting; re-pasting an updated
-list upserts by email rather than erroring on duplicates.
+guessed. Parsed and previewed before inserting. **Only adds genuinely new
+people** — anyone whose email already exists is skipped entirely, never
+edited (an earlier version upserted by email, which meant re-pasting a
+list that happened to include an existing person's email — e.g.
+themselves, without explicitly writing their real role — silently
+overwrote that person's role/site/manager; that's how an admin got their
+own role reset to `staff` once. Don't reintroduce an upsert here).
 
 **Leave & non-working days** (`/staff/leave`, email-gated like Admin —
 any registered active user can get in and manage their own): each person

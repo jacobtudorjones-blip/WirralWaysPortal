@@ -39,8 +39,17 @@ function useStaffUsers() {
     await deleteRow("staff_users", id);
     await refresh();
   }
-  // Mass-add: upserts by email, so re-pasting a list updates existing
-  // people (e.g. a role/manager change) instead of erroring on duplicates.
+  // Mass-add: adds genuinely NEW people only. Never touches someone
+  // already in the directory — an earlier version upserted by email
+  // (onConflict: "email", merge-duplicates), so re-pasting a list that
+  // happened to include an existing person's email (e.g. themselves,
+  // without explicitly writing their real role) silently overwrote their
+  // role/site/manager with whatever — or whatever default — was on that
+  // line. That's how an admin got locked out of their own account. Don't
+  // reintroduce an upsert here; existing rows are skipped, full stop —
+  // edit them individually (editUser) if something about them needs to
+  // change.
+  //
   // rows: [{ name, email, role, active, managerRef? }] — managerRef (an
   // email, or a name unique in the directory) is resolved to a real
   // manager_id in a second pass, after the insert, against the full
@@ -48,13 +57,22 @@ function useStaffUsers() {
   // paste resolves correctly even though they didn't have an id yet when
   // this batch was typed.
   async function bulkAddUsers(rows) {
-    const toInsert = rows.map(({ managerRef, ...r }) => r);
-    const created = await insertRows("staff_users", toInsert, { onConflict: "email" });
+    const existing = await listRows("staff_users", "?select=id,name,email");
+    const existingEmails = new Set(existing.map(u => u.email.toLowerCase()));
+    const newRows = rows.filter(r => !existingEmails.has(r.email.toLowerCase()));
+    const skipped = rows.filter(r => existingEmails.has(r.email.toLowerCase()));
+
+    if (newRows.length === 0) {
+      return { created: [], skipped };
+    }
+
+    const toInsert = newRows.map(({ managerRef, ...r }) => r);
+    const created = await insertRows("staff_users", toInsert);
     const createdByEmail = new Map(created.map(u => [u.email.toLowerCase(), u]));
 
-    const needsManager = rows.filter(r => r.managerRef && createdByEmail.has(r.email.toLowerCase()));
+    const needsManager = newRows.filter(r => r.managerRef && createdByEmail.has(r.email.toLowerCase()));
     if (needsManager.length > 0) {
-      const all = await listRows("staff_users", "?select=id,name,email");
+      const all = [...existing, ...created];
       const idByEmail = new Map(all.map(u => [u.email.toLowerCase(), u.id]));
       const idsByName = new Map();
       for (const u of all) {
@@ -74,7 +92,7 @@ function useStaffUsers() {
     }
 
     await refresh();
-    return created;
+    return { created, skipped };
   }
 
   const activeUsers = users.filter(u => u.active !== false);

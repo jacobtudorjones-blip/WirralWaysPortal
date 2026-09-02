@@ -34,7 +34,8 @@ function SignOut() {
         <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#fde8f2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30 }}>👋</div>
         <h2 style={{ color: CGL.neon, margin: 0 }}>Signed out</h2>
         <p style={{ color: "#6b7280", fontSize: 13 }}>See you next time, {done.name}.</p>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+          <Link to="/staff/sign-in" style={{ background: CGL.saffron, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, textDecoration: "none" }}>Sign in somewhere else →</Link>
           <button onClick={() => setDone(null)} style={{ background: CGL.blackcurrant, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, cursor: "pointer" }}>Sign out someone else</button>
           <Link to="/staff" style={{ padding: "10px 20px", color: "#6b7280", textDecoration: "none" }}>Done</Link>
         </div>

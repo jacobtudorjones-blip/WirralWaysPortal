@@ -1,11 +1,15 @@
 // Shared "start / finish" flow for WFH, working-elsewhere and outreach —
 // all three are the same shape: log who, when they started, optional
-// extra details, and later mark when they finished/returned.
+// extra details, and later mark when they finished/returned. Starting
+// here also closes any other open record this person has elsewhere (see
+// lib/attendance.js) — same "one place at a time" behaviour as the
+// unified Sign In page.
 import { useEffect, useState } from "react";
 import { CGL } from "../../data/rooms.js";
 import { inp, lbl } from "../../styles/shared.js";
 import { insertRow, listRows, updateRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
+import { closeAnyOpenRecordForUser } from "../lib/attendance.js";
 import { formatElapsed, formatClock, initials } from "../lib/format.js";
 import NamePicker from "./NamePicker.jsx";
 import PageWrap from "./PageWrap.jsx";
@@ -38,6 +42,7 @@ function StartFinishFlow({ table, title, subtitle, color, fields = [] }) {
     if (!name.trim()) return;
     setSaving(true); setError(null);
     try {
+      if (userId) await closeAnyOpenRecordForUser(userId);
       await insertRow(table, { name: name.trim(), user_id: userId, notes: notes.trim() || null, start_time: new Date().toISOString(), ...extra });
       setDone({ kind: "start", name: name.trim() });
       setName(""); setUserId(null); setExtra({}); setNotes("");
