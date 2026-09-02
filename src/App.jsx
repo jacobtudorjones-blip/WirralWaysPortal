@@ -38,7 +38,7 @@ function App() {
   const [preRoom,setPreRoom]         = useState(null);
   const [emailPreview,setEmailPreview]=useState(null);
   const [auditFilter,setAuditFilter] = useState("all");
-  const [filters,setFilters]         = useState({site:"all",type:"all",staffOnly:"all"});
+  const [filters,setFilters]         = useState({site:"all",type:"all",staffOnly:"all",minCapacity:1});
   const [editModal,setEditModal]     = useState(null);
   const [cancelModal,setCancelModal] = useState(null);
   const [showHelp,setShowHelp]       = useState(false);
@@ -476,9 +476,10 @@ function App() {
   const confirmedToday = bookings.filter(b=>b.date===todayStr()&&b.status==="confirmed");
   const filteredRooms  = ROOM_LIST.filter(r=>{
     if(filters.site!=="all"&&r.site!==filters.site) return false;
-    if(filters.type!=="all"&&r.type!==filters.type) return false;
+    if(filters.type!=="all"&&!r.types.includes(filters.type)) return false;
     if(filters.staffOnly==="public"&&r.staffOnly) return false;
     if(filters.staffOnly==="staff"&&!r.staffOnly) return false;
+    if((filters.minCapacity||1)>1&&typeof r.capacity==="number"&&r.capacity<filters.minCapacity) return false;
     return true;
   });
   const roomsBySite = SITES.reduce((acc,s)=>{

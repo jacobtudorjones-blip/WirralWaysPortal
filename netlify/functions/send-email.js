@@ -25,7 +25,7 @@
 // arbitrary bulk mail, a spoofed sender, or large file hosting.
 
 const BREVO_KEY = process.env.BREVO_API_KEY;
-const FROM = { name: "Wirral Ways Room Booking", email: "rooms@wirralways.org.uk" };
+const FROM = { name: "Wirral Ways Portal", email: "noreply@wirralways.org.uk" };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_RECIPIENTS = 25;
 const MAX_ATTACHMENT_B64 = 100000; // ~75KB decoded — generous for a booking .ics, nowhere near "file hosting"

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CGL, SITE_COLOR, ROOM_LIST, SITES } from "../data/rooms.js";
+import { CGL, SITE_COLOR, ROOM_LIST, ROOM_TYPES, SITES } from "../data/rooms.js";
 import { todayStr, formatDateShort, formatTime } from "../lib/helpers.js";
 import { slotToMins } from "../lib/slots.js";
 import BookingPopover from "./BookingPopover.jsx";
@@ -25,8 +25,8 @@ function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, o
     return d.toISOString().slice(0,10);
   });
 
-  const siteRooms   = ROOM_LIST.filter(r=>r.site===site&&(typeFilter==="all"||r.type===typeFilter));
-  const availTypes  = ["all",...Array.from(new Set(ROOM_LIST.filter(r=>r.site===site).map(r=>r.type))).sort()];
+  const siteRooms   = ROOM_LIST.filter(r=>r.site===site&&(typeFilter==="all"||r.types.includes(typeFilter)));
+  const availTypes  = ["all",...ROOM_TYPES.filter(t=>ROOM_LIST.some(r=>r.site===site&&r.types.includes(t)))];
   const DAY_ABBR    = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   const today       = todayStr();
 

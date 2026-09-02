@@ -92,7 +92,31 @@ plain JS (not TypeScript) project with no test suite yet.
   fixed. This only works on Netlify (functions need a host that runs them);
   if the frontend ever moves to static-only hosting (one.com), this needs
   to move to something that still executes it (a Supabase Edge Function is
-  the natural alternative).
+  the natural alternative). The sender is hardcoded as
+  `noreply@wirralways.org.uk` in both `send-email.js` and
+  `manager-report.js` — it must be a Brevo-verified sender (single sender
+  or domain auth) or Brevo silently rejects the send and the function
+  returns a 502 to the browser with no other symptom. That's exactly what
+  happened before this was switched from `rooms@wirralways.org.uk` (never
+  verified in Brevo) to `noreply@wirralways.org.uk` (already verified —
+  it's the address WordPress on the same domain already sends from). If
+  emails stop arriving again, check the Netlify function log for
+  `send-email`/`manager-report` for a Brevo rejection before assuming
+  it's a code bug.
+- Room types on Room Booking rooms (`src/data/rooms.js`) are a `types`
+  array per room, not a single string — a room can legitimately be both a
+  121 room and a group space, for example. `ROOM_TYPES` (exported from
+  `rooms.js`) is the canonical 5-tag list: `121 Room`, `Clinical Room`,
+  `Group Room`, `Meeting Room`, `Training Room`. Every room object also
+  gets a computed `type = types.join(" / ")` string so display-only call
+  sites (room cards, booking form, floor plan labels) don't need to
+  change. `FilterBar.jsx`'s type chips are generated from `ROOM_TYPES`
+  filtered to what's actually available at the selected site, and it also
+  has a capacity range slider ("fits at least N people") — both `App.jsx`
+  and the calendar views (`WeeklyView.jsx`/`DailyView.jsx`) filter with
+  `r.types.includes(filters.type)` rather than `r.type === filters.type`.
+  When adding a room, give it a `types` array (one or more of the 5
+  tags), not a bare `type` string.
 - Booking emails are real (`sendEmail`), not simulated — `App.jsx` used to
   call a `simulateEmail()` that only logged to the console for every
   request/confirmed/rejected/reminder/approver-notify email; that's gone.

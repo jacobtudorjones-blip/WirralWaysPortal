@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CGL, SITE_COLOR, ROOM_LIST, SITES } from "../data/rooms.js";
+import { CGL, SITE_COLOR, ROOM_LIST, ROOM_TYPES, SITES } from "../data/rooms.js";
 import { todayStr, formatTime } from "../lib/helpers.js";
 import { slotToMins } from "../lib/slots.js";
 import { inp } from "../styles/shared.js";
@@ -24,8 +24,8 @@ function DailyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, on
   const HALF_SLOTS = [];
   for(let h=8;h<19;h++){ HALF_SLOTS.push((String(h).padStart(2,"0"))+":00"); HALF_SLOTS.push((String(h).padStart(2,"0"))+":30"); }
 
-  const siteRooms = ROOM_LIST.filter(r => r.site === site && (typeFilter==="all" || r.type===typeFilter));
-  const availTypes = ["all", ...Array.from(new Set(ROOM_LIST.filter(r=>r.site===site).map(r=>r.type))).sort()];
+  const siteRooms = ROOM_LIST.filter(r => r.site === site && (typeFilter==="all" || r.types.includes(typeFilter)));
+  const availTypes = ["all", ...ROOM_TYPES.filter(t=>ROOM_LIST.some(r=>r.site===site&&r.types.includes(t)))];
 
   function getBooking(roomId, slotTime) {
     const sm = slotToMins(slotTime), em = sm+30;

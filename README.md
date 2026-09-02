@@ -131,9 +131,24 @@ each booking card). This used to go through a `simulateEmail()` that only
 logged to the console — worth knowing if you're wondering why nobody
 seemed to be getting emails before.
 
+**Room types & capacity filter.** Each room in `src/data/rooms.js` carries
+a `types` array rather than a single type string, so a room that's both a
+121 room and a group space (or both a training room and a meeting room)
+shows up under either filter instead of forcing one label. The canonical
+set is `ROOM_TYPES` (also exported from `rooms.js`): `121 Room`,
+`Clinical Room`, `Group Room`, `Meeting Room`, `Training Room` — narrowed
+down from the original room-by-room free text ("Group Space" folded into
+"Group Room", "Clinical Space" into "Clinical Room", the various meeting/
+training combinations split into their real tags). A computed
+`type = types.join(" / ")` string is kept on every room for existing
+display-only spots (room cards, booking form options, floor plan labels)
+so they don't need to know about the array. `FilterBar.jsx` also has a
+"fits at least N people" capacity slider (range 1 up to the largest room's
+capacity) alongside the site/type/access chips.
+
 **Manager attendance reports.** `netlify/functions/manager-report.js` is a
 *scheduled* function (see `netlify.toml`) that emails every manager (any
-`staff_users` row that's someone's `manager_id`) a plain-text list of
+`staff_users` row with `role = 'manager'`) a plain-text list of
 their direct reports who have/haven't been recorded today — covering
 site sign-in, WFH, outreach, or working elsewhere, not just physical
 sign-in. It runs every 15 minutes but only acts during the 09:30
