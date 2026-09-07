@@ -107,9 +107,11 @@ function SignOut() {
     );
   }
 
+  // Nothing is listed until you type something — no default dump of
+  // everyone currently signed in and where, just a name search.
   const visibleEntries = entries && search.trim()
     ? entries.filter(e => norm(e.name).includes(norm(search)))
-    : entries;
+    : [];
 
   return (
     <PageWrap
@@ -133,7 +135,7 @@ function SignOut() {
             placeholder="Type your name…"
             autoFocus
           />
-          {visibleEntries.length === 0 ? (
+          {!search.trim() ? null : visibleEntries.length === 0 ? (
             <div style={{ color: "#6b7280", fontSize: 13, fontStyle: "italic" }}>No match for "{search}".</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

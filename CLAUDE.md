@@ -256,7 +256,11 @@ plain JS (not TypeScript) project with no test suite yet.
   It also has a type-to-find search box (filters the open-records list by
   name using `lib/helpers.js`'s `norm()`, same case/whitespace-insensitive
   match Room Booking uses) rather than presenting a long scrollable list —
-  matters once more than a handful of people are signed in at once.
+  matters once more than a handful of people are signed in at once. No
+  names are listed until something is typed (`visibleEntries` is `[]`
+  whenever `search` is empty) — this isn't a directory to browse, so
+  nothing shows who's currently signed in and where until you're
+  specifically searching for yourself.
 - Outreach has manager notifications at both ends, plus a safety-net
   alert if someone goes quiet — all three live in `src/staff/lib/notify.js`
   and only fire when the person has a `manager_id` on file with an email:
