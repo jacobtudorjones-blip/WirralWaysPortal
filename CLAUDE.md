@@ -200,6 +200,20 @@ plain JS (not TypeScript) project with no test suite yet.
   change `REPORT_WINDOW_MINUTES` in that file, update both the cron
   interval AND the 8-10 hour range in `netlify.toml` to match, or it'll
   fire more than once a day (or miss the window entirely).
+- `netlify/functions/auto-signout.js` is the same self-gating pattern as
+  `manager-report.js`, at 22:00 Europe/London instead of 09:30 (cron
+  `*/15 21-22 * * *` — 21-22 UTC covers 22:00 local in both BST and
+  GMT). Closes **every** currently-open attendance record across **all
+  four** tables (`staff_sign_ins`, `staff_wfh`, `staff_elsewhere`,
+  `staff_outreach`) in one bulk PATCH per table, not just office
+  sign-ins — deliberately matching the "one unified sign in/out" model
+  (`SignOut.jsx`) rather than treating physical presence as the only
+  thing that needs closing out nightly. No notification is sent to the
+  person or their manager when this happens — it's a nightly tidy-up,
+  not an event anyone needs to act on. If auto-closing outreach
+  specifically ever turns out to be wrong (e.g. genuine overnight
+  trips), narrow `CLOSE_TABLES` in that file rather than removing the
+  function entirely.
 - `/staff/sign-in` is unified across office sites and remote modes
   (`REMOTE_MODES` in `data/staff.js` now carries a `table` field —
   `staff_wfh`/`staff_elsewhere`/`staff_outreach` — that's what SignIn.jsx

@@ -24,3 +24,11 @@
 # narrow this if outreach regularly happens outside it.
 [functions."outreach-overdue-alert"]
   schedule = "*/15 6-19 * * *"
+
+# auto-signout checks the actual time itself (see the file), same
+# self-gating pattern as manager-report — this just needs to land inside
+# its 15-minute window once a day (must match CLOSE_WINDOW_MINUTES in
+# that file). 21-22 UTC covers 22:00 Europe/London in both BST (=21:00
+# UTC) and GMT (=22:00 UTC).
+[functions."auto-signout"]
+  schedule = "*/15 21-22 * * *"
