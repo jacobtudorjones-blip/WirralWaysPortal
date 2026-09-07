@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CGL, APPROVERS, REQUEST_NOTIFY_EMAILS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
-import { genId, norm, todayStr, nowStr, formatDate, formatDateShort, formatTime } from "./lib/helpers.js";
+import { genId, norm, todayStr, toDateStr, nowStr, formatDate, formatDateShort, formatTime } from "./lib/helpers.js";
 import { slotToMins } from "./lib/slots.js";
 import { loadKey, saveKey } from "./lib/storage.js";
 import { addToWaitlist, notifyWaitlist } from "./lib/waitlist.js";
@@ -117,7 +117,7 @@ function App() {
   useEffect(()=>{
     if(bookings.length === 0) return;
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
-    const tomorrowStr = tomorrow.toISOString().slice(0,10);
+    const tomorrowStr = toDateStr(tomorrow);
     const due = bookings.filter(b=>
       b.status==="confirmed" &&
       b.date===tomorrowStr &&
@@ -141,7 +141,7 @@ function App() {
   useEffect(()=>{
     function check() {
       const now = new Date();
-      const todayS = now.toISOString().slice(0,10);
+      const todayS = toDateStr(now);
       const nowMins = now.getHours()*60 + now.getMinutes();
       setBookings(prev=>{
         const needsRelease = prev.filter(b=>
@@ -179,7 +179,7 @@ function App() {
   // Process login notifications once both user identity and bookings data are available
   function _processLogin(identity, loadedBookings) {
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
-    const cutoff = yesterday.toISOString().slice(0,10);
+    const cutoff = toDateStr(yesterday);
     const myEmail = norm(identity.email);
 
     // Missed check-ins: confirmed past bookings with no response yet
@@ -199,7 +199,7 @@ function App() {
     }
     // Recently approved/rejected (last 7 days)
     const week = new Date(); week.setDate(week.getDate()-7);
-    const weekStr = week.toISOString().slice(0,10);
+    const weekStr = toDateStr(week);
     const recentApproved = loadedBookings.filter(b=>
       norm(b.email)===myEmail && b.status==="confirmed" && b.approvedAt && b.approvedAt>=weekStr &&
       b.approvedBy && norm(b.approvedBy)!==myEmail

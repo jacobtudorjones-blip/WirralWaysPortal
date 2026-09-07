@@ -9,7 +9,7 @@
 // instead of a flood of individual emails; see BookCar.jsx's comment.
 import { useState } from "react";
 import { CGL, VEHICLE } from "../../data/car.js";
-import { todayStr, formatDateShort, formatTime } from "../../lib/helpers.js";
+import { todayStr, toDateStr, formatDateShort, formatTime } from "../../lib/helpers.js";
 import { inp, lbl } from "../../styles/shared.js";
 
 // Same rule as BookCar.jsx's hasConflict — only a CONFIRMED booking blocks
@@ -54,7 +54,7 @@ function BulkBookCar({ bookings, onBook, onClose, currentUser }) {
     const out = [], end = new Date(rangeEnd + "T00:00:00");
     let cur = new Date(rangeStart + "T00:00:00");
     while (cur <= end) {
-      if (weekdays.includes(cur.getDay())) out.push(cur.toISOString().slice(0, 10));
+      if (weekdays.includes(cur.getDay())) out.push(toDateStr(cur));
       cur.setDate(cur.getDate() + 1);
     }
     return out;

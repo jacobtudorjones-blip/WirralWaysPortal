@@ -1,7 +1,28 @@
 // Generic date/time/booking helper functions used throughout the app.
 
 const genId    = () => Math.random().toString(36).slice(2,10);
-const todayStr = () => new Date().toISOString().slice(0,10);
+// Local-calendar-date formatter — "which day is it where the browser is",
+// NOT `date.toISOString().slice(0,10)`. The two differ whenever the
+// browser's timezone is ahead of UTC — the UK's own British Summer Time
+// (UTC+1, in effect roughly late March–late October, so most of the
+// year) included: `new Date(dateStr+"T00:00:00")` builds *local* midnight,
+// and `.toISOString()` converts that to UTC, which in a UTC+1 zone is
+// 23:00 the *previous* day — so `.toISOString().slice(0,10)` silently
+// returns yesterday's date, every time, all day, not just near midnight.
+// This was a real bug (not a data problem) in WeeklyView's week-grid,
+// CarMonth's month-grid, and both bulk-booking date-range generators —
+// all built dates this way and were rendering/generating everything one
+// day out for anyone browsing from the UK during BST. Use this whenever
+// turning a Date object that represents a calendar day (as opposed to a
+// precise instant, where toISOString() is exactly what you want) back
+// into a "YYYY-MM-DD" string.
+function toDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return y + "-" + m + "-" + day;
+}
+const todayStr = () => toDateStr(new Date());
 const nowStr   = () => new Date().toISOString();
 const norm     = s  => (s||"").trim().toLowerCase();
 // URL-friendly slug for a room name, e.g. "Meadow Room" -> "meadow-room".
@@ -57,7 +78,7 @@ function getRecurrenceDates(start, pattern, until, nthWeekday = null) {
       if (day !== null) {
         const d = new Date(year, month, day);
         if (d > end) break;
-        if (d >= cur) dates.push(d.toISOString().slice(0, 10));
+        if (d >= cur) dates.push(toDateStr(d));
       }
       month++;
       if (month > 11) { month = 0; year++; }
@@ -68,7 +89,7 @@ function getRecurrenceDates(start, pattern, until, nthWeekday = null) {
   }
 
   while (cur <= end) {
-    dates.push(cur.toISOString().slice(0, 10));
+    dates.push(toDateStr(cur));
     if (pattern === "weekly")       cur.setDate(cur.getDate() + 7);
     else if (pattern === "fortnightly") cur.setDate(cur.getDate() + 14);
     else if (pattern === "monthly") cur.setMonth(cur.getMonth() + 1);
@@ -85,7 +106,7 @@ function hasConflict(bookings,roomId,date,startTime,endTime,excludeId=null) {
 }
 
 export {
-  genId, todayStr, nowStr, norm, slugify,
+  genId, todayStr, toDateStr, nowStr, norm, slugify,
   formatDate, formatDateShort, formatTime, formatDateTime,
   getNthWeekdayOfMonth, getRecurrenceDates, hasConflict,
 };

@@ -8,7 +8,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { CGL, VEHICLE } from "../../data/car.js";
-import { todayStr, formatTime } from "../../lib/helpers.js";
+import { todayStr, toDateStr, formatTime } from "../../lib/helpers.js";
 import { useCarBookings } from "../lib/useCarBookings.js";
 import PageWrap from "../components/PageWrap.jsx";
 
@@ -28,7 +28,7 @@ function buildMonthGrid(monthStart) {
   return Array.from({ length: weeks * 7 }, (_, i) => {
     const d = new Date(gridStart);
     d.setDate(gridStart.getDate() + i);
-    return d.toISOString().slice(0, 10);
+    return toDateStr(d);
   });
 }
 
@@ -39,7 +39,7 @@ function CarMonth() {
   function shiftMonth(delta) {
     const d = new Date(monthStart + "T00:00:00");
     d.setMonth(d.getMonth() + delta, 1);
-    setMonthStart(d.toISOString().slice(0, 10));
+    setMonthStart(toDateStr(d));
   }
   function goToday() { setMonthStart(todayStr().slice(0, 7) + "-01"); }
 

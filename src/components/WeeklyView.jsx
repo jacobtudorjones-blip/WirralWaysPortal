@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CGL, SITE_COLOR, ROOM_LIST, ROOM_TYPES, SITES } from "../data/rooms.js";
-import { todayStr, formatDateShort, formatTime } from "../lib/helpers.js";
+import { todayStr, toDateStr, formatDateShort, formatTime } from "../lib/helpers.js";
 import { slotToMins } from "../lib/slots.js";
 import BookingPopover from "./BookingPopover.jsx";
 
@@ -11,7 +11,7 @@ function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, o
     const day = dt.getDay();
     const diff = (day===0?-6:1-day);
     const mon = new Date(dt); mon.setDate(dt.getDate()+diff);
-    return mon.toISOString().slice(0,10);
+    return toDateStr(mon);
   }
   const [weekStart, setWeekStart] = useState(()=>getWeekStart(todayStr()));
   const [site, setSite]           = useState("Price Street");
@@ -22,7 +22,7 @@ function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, o
   const days = Array.from({length:7},(_,i)=>{
     const d = new Date(weekStart+"T00:00:00");
     d.setDate(d.getDate()+i);
-    return d.toISOString().slice(0,10);
+    return toDateStr(d);
   });
 
   const siteRooms   = ROOM_LIST.filter(r=>r.site===site&&(typeFilter==="all"||r.types.includes(typeFilter)));
@@ -30,8 +30,8 @@ function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, o
   const DAY_ABBR    = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   const today       = todayStr();
 
-  function prevWeek(){ const d=new Date(weekStart+"T00:00:00"); d.setDate(d.getDate()-7); setWeekStart(d.toISOString().slice(0,10)); }
-  function nextWeek(){ const d=new Date(weekStart+"T00:00:00"); d.setDate(d.getDate()+7); setWeekStart(d.toISOString().slice(0,10)); }
+  function prevWeek(){ const d=new Date(weekStart+"T00:00:00"); d.setDate(d.getDate()-7); setWeekStart(toDateStr(d)); }
+  function nextWeek(){ const d=new Date(weekStart+"T00:00:00"); d.setDate(d.getDate()+7); setWeekStart(toDateStr(d)); }
   function goToday() { setWeekStart(getWeekStart(todayStr())); }
 
   function getBookingsForCell(roomId, date) {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CGL, ROOMS, ROOM_LIST, SITES } from "../data/rooms.js";
-import { todayStr, formatDateShort, formatTime, hasConflict } from "../lib/helpers.js";
+import { todayStr, toDateStr, formatDateShort, formatTime, hasConflict } from "../lib/helpers.js";
 import { inp, lbl } from "../styles/shared.js";
 
 // Three modes:
@@ -55,7 +55,7 @@ function BulkBookingForm({ bookings, onBook, onClose, currentUser }) {
       const out=[], end=new Date(rangeEnd+"T00:00:00");
       let cur=new Date(rangeStart+"T00:00:00");
       while(cur<=end) {
-        if(weekdays.includes(cur.getDay())) out.push({roomId:rangeRoom, date:cur.toISOString().slice(0,10)});
+        if(weekdays.includes(cur.getDay())) out.push({roomId:rangeRoom, date:toDateStr(cur)});
         cur.setDate(cur.getDate()+1);
       }
       return out;

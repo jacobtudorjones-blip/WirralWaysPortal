@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CGL, SITE_COLOR, ROOMS, SITES } from "../data/rooms.js";
-import { formatTime } from "../lib/helpers.js";
+import { formatTime, toDateStr } from "../lib/helpers.js";
 import { lbl } from "../styles/shared.js";
 
 function AnalyticsTab({ bookings }) {
@@ -8,12 +8,12 @@ function AnalyticsTab({ bookings }) {
   const [period, setPeriod] = useState("all");
 
   const now = new Date();
-  const periodStart = period==="30d" ? new Date(now-30*86400000).toISOString().slice(0,10)
-                    : period==="90d" ? new Date(now-90*86400000).toISOString().slice(0,10) : null;
+  const periodStart = period==="30d" ? toDateStr(new Date(now-30*86400000))
+                    : period==="90d" ? toDateStr(new Date(now-90*86400000)) : null;
 
   const past = bookings.filter(b=>{
     if(b.status!=="confirmed"&&b.status!=="unused") return false;
-    if(b.date >= now.toISOString().slice(0,10)) return false;
+    if(b.date >= toDateStr(now)) return false;
     if(site!=="all"&&ROOMS[b.roomId]?.site!==site) return false;
     if(periodStart&&b.date<periodStart) return false;
     return true;
