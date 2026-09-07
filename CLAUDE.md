@@ -282,13 +282,18 @@ plain JS (not TypeScript) project with no test suite yet.
   `src/components/`, not staff-specific) and takes `pin` as a prop, since
   Room Booking's testing lock (below) reuses it with a different code —
   don't hardcode a single PIN back into the component. It also
-  deliberately never shows sign-in/start times — presence only. Times are
-  admin-dashboard-only
-  (AdminDashboard.jsx's log table). The one exception is outreach's "back
-  by" (expected_return) — that's not when someone started, it's when
-  they're due back, kept for lone-working safety since the overdue flag
+  deliberately never shows sign-in/start times — presence only. This is a
+  portal-wide policy, not just WhoIsIn.jsx: `SignOut.jsx` and
+  `StartFinishFlow.jsx`'s "Finishing" tab also don't show when someone
+  signed in/started, for the same reason — the point of this app is
+  knowing *where* people are, not clocking hours. Times are
+  admin-dashboard-only (AdminDashboard.jsx's log table). The one
+  exception anywhere in the non-admin UI is outreach's "back by"
+  (`expected_return`) — that's not when someone started, it's when
+  they're due back, kept for lone-working safety since the overdue alert
   depends on it. Don't add `formatClock`/`formatElapsed` back into
-  WhoIsIn.jsx without checking this is still what's wanted.
+  WhoIsIn.jsx, SignOut.jsx, or StartFinishFlow.jsx's finish list without
+  checking this is still what's wanted.
 - Leave (`staff_leave` table) and non-working days
   (`staff_users.non_working_days`) are two different things, both
   editable at `/staff/leave` — leave is one-off date ranges (annual

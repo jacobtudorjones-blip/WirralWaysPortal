@@ -5,7 +5,7 @@ import { REMOTE_MODES } from "../../data/staff.js";
 import { listRows, updateRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { sendOutreachReturnNotification } from "../lib/notify.js";
-import { formatElapsed, formatClock, initials } from "../lib/format.js";
+import { initials } from "../lib/format.js";
 import PageWrap from "../components/PageWrap.jsx";
 
 // Table → {label, icon} for the three remote modes, so this page can label
@@ -25,9 +25,15 @@ async function loadOpenEntries() {
     listRows("staff_elsewhere", "?select=*&returned_time=is.null"),
     listRows("staff_outreach", "?select=*&returned_time=is.null"),
   ]);
+  // Never shows sign-in/start times here — same policy as WhoIsIn.jsx and
+  // for the same reason: this is about knowing where people are, not
+  // clocking hours. Outreach's "back by" is the one exception, kept for
+  // lone-working safety (the overdue alert depends on it) — it's not
+  // when someone started, it's when they're due back.
   const remote = (rows, table) => rows.map(r => ({
     id: r.id, table, name: r.name, userId: r.user_id, startTime: r.start_time, closeField: "returned_time",
-    label: MODE_BY_TABLE[table].icon + " " + MODE_BY_TABLE[table].label + (r.location ? " — " + r.location : ""),
+    label: MODE_BY_TABLE[table].icon + " " + MODE_BY_TABLE[table].label + (r.location ? " — " + r.location : "")
+      + (table === "staff_outreach" && r.expected_return ? " · back by " + r.expected_return : ""),
   }));
   const entries = [
     ...signIns.map(r => ({
@@ -118,7 +124,7 @@ function SignOut() {
               <span style={{ width: 36, height: 36, borderRadius: "50%", background: "#f0e8f9", color: CGL.blackcurrant, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{initials(e.name)}</span>
               <span style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{e.name}</div>
-                <div style={{ fontSize: 11, color: "#6b7280" }}>{e.label} · since {formatClock(e.startTime)} ({formatElapsed(e.startTime)} ago)</div>
+                <div style={{ fontSize: 11, color: "#6b7280" }}>{e.label}</div>
               </span>
             </button>
           ))}
@@ -129,7 +135,7 @@ function SignOut() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 50 }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: "26px 24px", maxWidth: 340, width: "100%", textAlign: "center" }}>
             <h3 style={{ margin: "0 0 6px" }}>Sign out {confirming.name}?</h3>
-            <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 18 }}>{confirming.label} · since {formatClock(confirming.startTime)}</p>
+            <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 18 }}>{confirming.label}</p>
             <button onClick={confirmSignOut} style={{ width: "100%", background: CGL.neon, color: "#fff", border: "none", borderRadius: 10, padding: 12, fontWeight: 700, cursor: "pointer", marginBottom: 8 }}>Yes, sign out</button>
             <button onClick={() => setConfirming(null)} style={{ width: "100%", background: "none", border: "1px solid #e5e7eb", borderRadius: 10, padding: 11, color: "#6b7280", cursor: "pointer" }}>Cancel</button>
           </div>

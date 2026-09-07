@@ -11,7 +11,7 @@ import { insertRow, listRows, updateRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { closeAnyOpenRecordForUser } from "../lib/attendance.js";
 import { sendSignInAck, sendOutreachStartNotification, sendOutreachReturnNotification } from "../lib/notify.js";
-import { formatElapsed, formatClock, initials } from "../lib/format.js";
+import { initials } from "../lib/format.js";
 import NamePicker from "./NamePicker.jsx";
 import PageWrap from "./PageWrap.jsx";
 import PrivacyNote from "./PrivacyNote.jsx";
@@ -136,8 +136,12 @@ function StartFinishFlow({ table, title, subtitle, color, fields = [] }) {
                 <span style={{ width: 36, height: 36, borderRadius: "50%", background: "#f0e8f9", color: CGL.blackcurrant, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{initials(e.name)}</span>
                 <span style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{e.name}</div>
+                  {/* No start time shown — this is about where people are,
+                      not clocking hours (see WhoIsIn.jsx/SignOut.jsx for the
+                      same policy). Outreach's "back by" is the one
+                      exception, kept for lone-working safety. */}
                   <div style={{ fontSize: 11, color: "#6b7280" }}>
-                    since {formatClock(e.start_time)} ({formatElapsed(e.start_time)} ago){e.location ? " · " + e.location : ""}
+                    {[e.location, table === "staff_outreach" && e.expected_return ? "back by " + e.expected_return : null].filter(Boolean).join(" · ")}
                   </div>
                 </span>
                 <span style={{ fontSize: 11, color: color, fontWeight: 700 }}>Mark finished</span>
