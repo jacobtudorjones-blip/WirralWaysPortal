@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CGL } from "../../data/rooms.js";
 import { REMOTE_MODES } from "../../data/staff.js";
+import { norm } from "../../lib/helpers.js";
 import { listRows, updateRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { sendOutreachReturnNotification } from "../lib/notify.js";
 import { initials } from "../lib/format.js";
+import { inp } from "../../styles/shared.js";
 import PageWrap from "../components/PageWrap.jsx";
 
 // Table → {label, icon} for the three remote modes, so this page can label
@@ -63,6 +65,7 @@ function SignOut() {
   const [searchParams] = useSearchParams();
   const filterTable = FILTER_LABELS[searchParams.get("filter")] ? searchParams.get("filter") : null;
   const [entries, setEntries] = useState(null);
+  const [search, setSearch] = useState("");
   const [error, setError] = useState(null);
   const [confirming, setConfirming] = useState(null);
   const [done, setDone] = useState(null);
@@ -97,12 +100,16 @@ function SignOut() {
         <p style={{ color: "#6b7280", fontSize: 13 }}>{done.table === "staff_outreach" ? "Glad you're back safe, " + done.name + "." : "See you next time, " + done.name + "."}</p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
           <Link to="/staff/sign-in" style={{ background: CGL.saffron, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, textDecoration: "none" }}>Sign in somewhere else →</Link>
-          <button onClick={() => setDone(null)} style={{ background: CGL.blackcurrant, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, cursor: "pointer" }}>Sign out someone else</button>
+          <button onClick={() => { setDone(null); setSearch(""); }} style={{ background: CGL.blackcurrant, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, cursor: "pointer" }}>Sign out someone else</button>
           <Link to="/staff" style={{ padding: "10px 20px", color: "#6b7280", textDecoration: "none" }}>Done</Link>
         </div>
       </div>
     );
   }
+
+  const visibleEntries = entries && search.trim()
+    ? entries.filter(e => norm(e.name).includes(norm(search)))
+    : entries;
 
   return (
     <PageWrap
@@ -115,20 +122,36 @@ function SignOut() {
       ) : entries.length === 0 ? (
         <div style={{ color: "#6b7280", fontSize: 13, fontStyle: "italic" }}>{filterTable === "staff_outreach" ? "Nobody is currently on outreach." : "Nobody is currently signed in."}</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {entries.map(e => (
-            <button key={e.table + ":" + e.id} onClick={() => setConfirming(e)} style={{
-              background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "12px 14px",
-              display: "flex", alignItems: "center", gap: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-            }}>
-              <span style={{ width: 36, height: 36, borderRadius: "50%", background: "#f0e8f9", color: CGL.blackcurrant, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{initials(e.name)}</span>
-              <span style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{e.name}</div>
-                <div style={{ fontSize: 11, color: "#6b7280" }}>{e.label}</div>
-              </span>
-            </button>
-          ))}
-        </div>
+        <>
+          {/* Type-to-find instead of scanning a long list — matters once
+              there's more than a handful of people signed in at once. */}
+          <input
+            type="text"
+            style={{ ...inp, marginBottom: 12 }}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Type your name…"
+            autoFocus
+          />
+          {visibleEntries.length === 0 ? (
+            <div style={{ color: "#6b7280", fontSize: 13, fontStyle: "italic" }}>No match for "{search}".</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {visibleEntries.map(e => (
+                <button key={e.table + ":" + e.id} onClick={() => setConfirming(e)} style={{
+                  background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "12px 14px",
+                  display: "flex", alignItems: "center", gap: 12, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                }}>
+                  <span style={{ width: 36, height: 36, borderRadius: "50%", background: "#f0e8f9", color: CGL.blackcurrant, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{initials(e.name)}</span>
+                  <span style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{e.name}</div>
+                    <div style={{ fontSize: 11, color: "#6b7280" }}>{e.label}</div>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {confirming && (

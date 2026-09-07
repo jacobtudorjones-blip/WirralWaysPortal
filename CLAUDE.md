@@ -253,6 +253,10 @@ plain JS (not TypeScript) project with no test suite yet.
   `/staff/sign-out?filter=staff_outreach`, which narrows Sign Out's list
   to outreach-only (`SignOut.jsx`'s `FILTER_LABELS`) so someone doesn't
   have to scan past everyone signed in elsewhere to find their own name.
+  It also has a type-to-find search box (filters the open-records list by
+  name using `lib/helpers.js`'s `norm()`, same case/whitespace-insensitive
+  match Room Booking uses) rather than presenting a long scrollable list —
+  matters once more than a handful of people are signed in at once.
 - Outreach has manager notifications at both ends, plus a safety-net
   alert if someone goes quiet — all three live in `src/staff/lib/notify.js`
   and only fire when the person has a `manager_id` on file with an email:
