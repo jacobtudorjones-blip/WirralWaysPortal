@@ -26,15 +26,21 @@
 
 const BREVO_KEY = process.env.BREVO_API_KEY;
 
-// Two verified Brevo senders, one per app — this function is shared by
-// both, so the caller picks which via `from` (a short key, not a raw
+// Verified Brevo senders — this function is shared by every app in the
+// project, so the caller picks which via `from` (a short key, not a raw
 // address: keeps this from being a spoofed-sender relay, same reasoning
 // as the rest of this file's request validation). Anything unrecognised
 // (missing, typo'd, tampered) falls back to the room-booking sender
 // rather than erroring, since that's the original/default behaviour.
+// "car-booking" deliberately reuses rooms@wirralways.org.uk's verified
+// address with a different display name, rather than needing a third
+// address verified in Brevo (see CLAUDE.md's note on that being a real
+// past incident) — Brevo verifies the address, not the display name, so
+// this is a distinct-looking sender in an inbox for free.
 const SENDERS = {
   "room-booking": { name: "Wirral Ways Room Booking", email: "rooms@wirralways.org.uk" },
   "staff-portal": { name: "Wirral Ways Staff Portal", email: "noreply@wirralways.org.uk" },
+  "car-booking": { name: "Wirral Ways Car Booking", email: "rooms@wirralways.org.uk" },
 };
 const DEFAULT_SENDER = "room-booking";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

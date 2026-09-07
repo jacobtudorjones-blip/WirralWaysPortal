@@ -37,25 +37,31 @@ function PrivacyPolicy() {
         against it. Every request, approval, rejection and cancellation is written to an audit log
         against the name of whoever did it.
       </Section>
+      <Section title="What's recorded — Car Booking">
+        Your name and CGL email address, and details of any booking you make for the shared work
+        car: date, time, what it's needed for, and any notes. Every request, approval, rejection
+        and cancellation is written to the booking record against the name of whoever did it —
+        same pattern as Room Booking's audit trail.
+      </Section>
       <Section title="Why">
         For health and safety, fire safety, and lone-working purposes on the Staff Portal side —
         so it's known who is on site (for fire evacuation and roll call) and who is working alone
-        off-site, and when they were expected back. On the Room Booking side, to manage shared
-        room space fairly and keep a record of who requested and approved each booking.
+        off-site, and when they were expected back. On Room Booking and Car Booking, to manage
+        shared resources fairly and keep a record of who requested and approved each booking.
       </Section>
       <Section title="Who can see it">
         Staff signed in with an <strong>admin</strong> or <strong>manager</strong> role in the
         staff directory can view the live "who's in" view and the admin sign-in log
         (times included). A person's manager also gets an email when they start or return from
-        outreach, or if they're significantly overdue back. On Room Booking, anyone on the
-        approver list (or with the admin role in the staff directory) can see booking requests —
-        who made them, who they're for, and what they're for — in order to approve or reject
-        them. This is enforced by the app itself, not by additional encryption — see the
-        technical note in this project's README if you need to assess exactly how.
+        outreach, or if they're significantly overdue back. On Room Booking and Car Booking,
+        anyone on the relevant approver list (or with the admin role in the staff directory) can
+        see booking requests — who made them, who they're for, and what they're for — in order to
+        approve or reject them. This is enforced by the app itself, not by additional encryption —
+        see the technical note in this project's README if you need to assess exactly how.
       </Section>
       <Section title="Where it's stored, and who else handles it">
-        Portal data (the staff directory, attendance records, leave, and room bookings) is stored
-        in a <strong>Supabase</strong> database. The portal itself is hosted on{" "}
+        Portal data (the staff directory, attendance records, leave, and room and car bookings) is
+        stored in a <strong>Supabase</strong> database. The portal itself is hosted on{" "}
         <strong>Netlify</strong>. Emails the portal sends — sign-in confirmations, visitor and
         manager notifications, booking confirmations and reminders — are sent through{" "}
         <strong>Brevo</strong>, a transactional email provider; Brevo only ever receives what's

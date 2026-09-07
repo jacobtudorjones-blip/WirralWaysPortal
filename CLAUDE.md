@@ -4,13 +4,13 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-A portal hub plus two apps, sharing one Vite + React 18 project and one
+A portal hub plus three apps, sharing one Vite + React 18 project and one
 deploy (see README.md for the full picture):
 
-- **Landing** (`/`, `src/pages/Landing.jsx`) — the actual home page: two
-  cards (Room Booking, Staff Portal), nothing else. Neither app auto-opens
-  here anymore — this exists specifically so `/` isn't a direct entry into
-  Room Booking. More sections are expected here later.
+- **Landing** (`/`, `src/pages/Landing.jsx`) — the actual home page: three
+  cards (Room Booking, Staff Portal, Car Booking), nothing else. None of
+  the apps auto-open here — this exists specifically so `/` isn't a direct
+  entry into any one of them. More sections are expected here later.
 - **Room Booking** (`/rooms/*`, `src/App.jsx` + `src/components/`) — the
   original app, now mounted under `/rooms` instead of `/`. No backend of
   its own for data: Supabase (REST) is used as a JSON key/value store,
@@ -26,10 +26,22 @@ deploy (see README.md for the full picture):
   Supabase directly from the browser (its own `staff_*` tables — see
   `supabase/staff-portal-schema.sql`), same architecture as Room Booking,
   no server of its own.
+- **Car Booking** (`/car/*`, `src/car/`) — book the one shared work
+  vehicle: pick a date and time slot, requests need approval (same
+  pattern as Room Booking — `CarApprovals.jsx`), and an approver's own
+  requests auto-confirm. Much smaller than Room Booking (one vehicle, no
+  sites/rooms/floor-plans), but the same shape: its own `pages/`,
+  `components/`, `lib/` under `src/car/`, its own identity screen
+  (`CarIdentityScreen.jsx`, CGL-email-only, checks `CAR_APPROVERS`), and
+  its own Supabase table (`car_bookings` — see
+  `supabase/car-booking-schema.sql`). **Currently PIN-locked for testing**
+  (code `1335`, same as Room Booking — see `main.jsx`'s `CarLock`) — see
+  that section below for how the pattern works and how to remove it.
 
 Routing lives in `src/main.jsx`: `/` mounts `Landing`, `/staff/*` mounts
-`StaffApp`, `/rooms/*` mounts the Room Booking `App`, anything else hits a
-top-level `NotFound`. Client-side routing needs a server-side fallback to
+`StaffApp`, `/rooms/*` mounts the Room Booking `App`, `/car/*` mounts
+`CarApp`, anything else hits a top-level `NotFound`. Client-side routing
+needs a server-side fallback to
 `index.html` for every path — `public/_redirects` does that on Netlify,
 `public/.htaccess` does the same on Apache hosts (one.com). Both get
 copied into `dist/` by the build; keep both in sync if the routing rule
@@ -91,6 +103,57 @@ plain JS (not TypeScript) project with no test suite yet.
   `IdentityScreen.jsx`/APPROVERS changed. To reopen Room Booking properly,
   delete `RoomsLock` and change the `/rooms/*` route back to
   `element={<App />}`.
+- **Car Booking is currently PIN-locked for testing too** — same pattern,
+  same code (`1335`), `main.jsx`'s `CarLock` this time (`storageKey`
+  `ww_car_testing_pin`, separate from Room Booking's so unlocking one
+  doesn't unlock the other). Remove the same way: delete `CarLock`,
+  change `/car/*` back to `element={<CarApp />}`.
+- Car Booking (`src/car/`) deliberately duplicates a few small things
+  from Room Booking rather than sharing them, on the theory that a
+  second, much simpler booking flow was cheaper to keep independent than
+  to generalise the first one to cover both:
+  - `CarIdentityScreen.jsx` is its own component (not a reused/parameterised
+    `IdentityScreen.jsx`) — same email-validation/name-parsing logic, but
+    checks `CAR_APPROVERS` (`src/data/car.js`, defaults to importing Room
+    Booking's `APPROVERS` — replace with a real separate list if the same
+    people shouldn't approve both) instead of Room Booking's `APPROVERS`.
+  - `car/components/PageWrap.jsx` is its own copy of
+    `staff/components/PageWrap.jsx` (defaults `backTo` to `/car`), rather
+    than Car Booking reaching into the Staff Portal's `components/` —
+    keeps each app's `pages/`/`components/`/`lib/` self-contained, per the
+    "Staff Portal follows the same per-concern layout" convention this
+    file already documents; Car Booking follows it too now.
+  - `CarSchedulePicker.jsx` is a trimmed copy of `DaySchedulePicker.jsx`
+    (drag-to-select grid, `lib/slots.js`'s `SLOTS`/`slotToMins`/
+    `minsToSlot` reused directly since those are already room-agnostic) —
+    no room concept, no waitlist button (doesn't apply to one vehicle).
+  - `car_bookings` rows are read/written with the exact same generic
+    `listRows`/`insertRow`/`updateRow` helpers from `src/lib/staffApi.js`
+    that every `staff_*` table also uses — despite the filename, that
+    module was already fully table-agnostic, not staff-specific, so Car
+    Booking needed no new API layer, just the shared one.
+  - Bookings are only ever blocked by another **confirmed** booking for
+    the same date/time (`BookCar.jsx`'s local `hasConflict()`) — pending
+    requests can overlap, since only one will actually get approved. Same
+    deliberate rule as Room Booking's `hasConflict()` in `lib/helpers.js`;
+    kept as a small local copy here rather than trying to reuse that one,
+    since it's coupled to Room Booking's `roomId`/camelCase field names
+    and `car_bookings` uses plain Supabase column names (`start_time`, not
+    `startTime`) throughout — there's no camelCase translation layer in
+    this module, unlike Room Booking's `bookings` state shape.
+  - Emails reuse `lib/emailHtml.js`'s `buildHtmlEmail()` (see the Room
+    Booking email bullet below) and go out under a **third** Brevo sender
+    key, `"car-booking"` (`send-email.js`'s `SENDERS` map) — same
+    `rooms@wirralways.org.uk` verified address as Room Booking, just a
+    different display name, specifically to avoid needing a fourth
+    address verified in Brevo (see the sender-verification incident
+    documented below) for what's cosmetically a different "from" name.
+  - Approving/rejecting/requesting all send real emails
+    (`car/lib/carEmail.js`), same event set as Room Booking
+    (requested/confirmed/rejected/approver_notify) minus
+    `recipientsFor()`'s "book for someone else" handling — Car Booking has
+    no "book for someone else" option (nothing stops it being added later
+    the same way Room Booking has it, just wasn't asked for here).
 - `APPROVERS` in `src/data/rooms.js` is the full authorization model for
   approving bookings — it's just an email allowlist, no real auth. Adding
   someone means adding their email there.

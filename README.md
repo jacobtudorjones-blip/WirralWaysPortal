@@ -1,9 +1,9 @@
 # Wirral Ways Portal
 
-A portal hub plus two apps, one Vite + React project, one deploy:
+A portal hub plus three apps, one Vite + React project, one deploy:
 
-- **Landing** (`/`) — pick a section: Room Booking or Staff Portal. More
-  sections are expected here in future.
+- **Landing** (`/`) — pick a section: Room Booking, Staff Portal, or Car
+  Booking. More sections are expected here in future.
 - **Room Booking** (`/rooms`) — for CGL's Wirral Ways sites (Price Street,
   Market Street, Argyle Street, Brighton Street). Staff identify themselves
   with a `@cgl.org.uk` email address, browse rooms, request bookings
@@ -12,31 +12,38 @@ A portal hub plus two apps, one Vite + React project, one deploy:
   directory) — approve/reject requests, check people in, and view
   analytics and an audit log. Individual rooms have their own URL, e.g.
   `/rooms/meadow-room` — shareable, bookmarkable, and what clicking a room
-  card takes you to.
+  card takes you to. **Currently PIN-locked for testing** (code `1335`).
 - **Staff Portal** (`/staff`) — sign in/out for health & safety and lone
   working, working-from-home and working-elsewhere tracking, outreach
   tracking, a live "who's in" roll-call view, and a staff directory with
   user management (add staff — one at a time or in bulk — record their
   site/role/manager). See [Staff Portal](#staff-portal) below.
+- **Car Booking** (`/car`) — book the one shared work vehicle: same
+  identify-by-email, pick-a-date-and-time, needs-approval shape as Room
+  Booking, scaled down for a single resource instead of many rooms across
+  sites. **Currently PIN-locked for testing too** (same code, `1335`).
 
-Both apps were originally single self-contained `index.html` files (React +
-Babel / plain JS loaded from CDNs, no build step); this project converts
-them into one normal Vite + React project with real client-side routing,
-so it can be developed, linted, and built like any other JS project —
-including with Claude Code.
+Both original apps (Room Booking, Staff Portal) started life as single
+self-contained `index.html` files (React + Babel / plain JS loaded from
+CDNs, no build step); this project converts them into one normal Vite +
+React project with real client-side routing, so it can be developed,
+linted, and built like any other JS project — including with Claude Code.
+Car Booking was added later, built directly in this structure from the
+start rather than converted from anything.
 
 ## Stack
 
 - [Vite](https://vitejs.dev/) + [React 18](https://react.dev/)
-- [react-router-dom](https://reactrouter.com/) for the Staff Portal's
-  client-side routing (`/staff/*`)
+- [react-router-dom](https://reactrouter.com/) for the Staff Portal's and
+  Car Booking's client-side routing (`/staff/*`, `/car/*`)
 - Plain inline styles (no CSS framework) — matches the original design
 - [Supabase](https://supabase.com/) (REST API), called directly from the
   browser: a simple JSON key/value store for Room Booking (table:
-  `ww_bookings`), and normal relational tables for the Staff Portal
+  `ww_bookings`), normal relational tables for the Staff Portal
   (`staff_users`, `staff_sign_ins`, `staff_wfh`, `staff_elsewhere`,
-  `staff_outreach` — see [Staff Portal](#staff-portal))
-- [Brevo](https://www.brevo.com/) for transactional email (Room Booking only)
+  `staff_outreach` — see [Staff Portal](#staff-portal)), and one more
+  relational table for Car Booking (`car_bookings`)
+- [Brevo](https://www.brevo.com/) for transactional email (all three apps)
 
 ## Getting started
 

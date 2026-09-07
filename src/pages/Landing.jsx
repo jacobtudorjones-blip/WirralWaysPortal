@@ -21,6 +21,14 @@ const SECTIONS = [
     color: CGL.ocean,
     light: "#e4f0f8",
   },
+  {
+    to: "/car",
+    icon: "🚗",
+    title: "Car Booking",
+    desc: "Book the shared work car for a date and time.",
+    color: CGL.saffron,
+    light: "#fdecd6",
+  },
 ];
 
 function Landing() {

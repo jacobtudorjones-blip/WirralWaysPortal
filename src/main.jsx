@@ -10,6 +10,7 @@ import PinGate from "./components/PinGate.jsx";
 // the first thing anyone sees, so it's a normal (non-lazy) import.
 const App = lazy(() => import("./App.jsx"));
 const StaffApp = lazy(() => import("./staff/StaffApp.jsx"));
+const CarApp = lazy(() => import("./car/CarApp.jsx"));
 
 function LoadingFallback() {
   return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontFamily: "system-ui,sans-serif" }}>Loading…</div>;
@@ -30,6 +31,24 @@ function RoomsLock() {
         subtitle="In testing mode — coming soon. To book a room, please contact wirral.services@cgl.org.uk."
       >
         <App />
+      </PinGate>
+    </div>
+  );
+}
+
+// TEMPORARY: same testing lock as Room Booking, same code — see
+// RoomsLock's comment above for how to remove this once Car Booking's
+// ready to go live.
+function CarLock() {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#faf8fc" }}>
+      <PinGate
+        storageKey="ww_car_testing_pin"
+        pin="1335"
+        title="Car Booking"
+        subtitle="In testing mode — coming soon. To book the car, please contact wirral.services@cgl.org.uk."
+      >
+        <CarApp />
       </PinGate>
     </div>
   );
@@ -60,6 +79,9 @@ root.render(
             TEMPORARY: PIN-locked while in testing — see RoomsLock above.
             To reopen it, swap this back to element={<App />}. */}
         <Route path="/rooms/*" element={<RoomsLock />} />
+        {/* Car Booking — one shared vehicle. TEMPORARY: PIN-locked while
+            in testing, same as Room Booking — see CarLock above. */}
+        <Route path="/car/*" element={<CarLock />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
