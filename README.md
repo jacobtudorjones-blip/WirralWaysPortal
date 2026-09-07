@@ -21,7 +21,10 @@ A portal hub plus three apps, one Vite + React project, one deploy:
 - **Car Booking** (`/car`) — book the one shared work vehicle: same
   identify-by-email, pick-a-date-and-time, needs-approval shape as Room
   Booking, scaled down for a single resource instead of many rooms across
-  sites. **Currently PIN-locked for testing too** (same code, `1335`).
+  sites. Also has a month-view calendar overview (`/car/month`) and a
+  bulk-booking option (multiple specific dates, or every weekday across a
+  date range, all in one request). **Currently PIN-locked for testing
+  too** (same code, `1335`).
 
 Both original apps (Room Booking, Staff Portal) started life as single
 self-contained `index.html` files (React + Babel / plain JS loaded from

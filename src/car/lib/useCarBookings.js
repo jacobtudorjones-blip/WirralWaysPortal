@@ -1,7 +1,7 @@
 // Loads car_bookings and exposes it plus refresh/CRUD helpers — shared by
 // every Car Booking page rather than each one rolling its own fetch.
 import { useCallback, useEffect, useState } from "react";
-import { listRows, insertRow, updateRow } from "../../lib/staffApi.js";
+import { listRows, insertRow, insertRows, updateRow } from "../../lib/staffApi.js";
 
 function useCarBookings() {
   const [bookings, setBookings] = useState(null); // null = still loading
@@ -19,7 +19,7 @@ function useCarBookings() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  return { bookings, error, reload, insertRow, updateRow };
+  return { bookings, error, reload, insertRow, insertRows, updateRow };
 }
 
 export { useCarBookings };

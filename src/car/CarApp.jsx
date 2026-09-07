@@ -10,6 +10,7 @@ import LiveClock from "../components/LiveClock.jsx";
 import CarIdentityScreen from "./components/CarIdentityScreen.jsx";
 import CarHome from "./pages/CarHome.jsx";
 import BookCar from "./pages/BookCar.jsx";
+import CarMonth from "./pages/CarMonth.jsx";
 import MyCarBookings from "./pages/MyCarBookings.jsx";
 import CarApprovals from "./pages/CarApprovals.jsx";
 
@@ -50,6 +51,7 @@ function CarApp() {
           <nav style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <NavLink to="/car" end style={navStyle}>Home</NavLink>
             <NavLink to="/car/book" style={navStyle}>Book</NavLink>
+            <NavLink to="/car/month" style={navStyle}>Month view</NavLink>
             <NavLink to="/car/mine" style={navStyle}>My bookings</NavLink>
             {user.isApprover && <NavLink to="/car/approvals" style={navStyle}>Approvals</NavLink>}
           </nav>
@@ -65,6 +67,7 @@ function CarApp() {
         <Routes>
           <Route index element={<CarHome />} />
           <Route path="book" element={<BookCar user={user} />} />
+          <Route path="month" element={<CarMonth />} />
           <Route path="mine" element={<MyCarBookings user={user} />} />
           {user.isApprover && <Route path="approvals" element={<CarApprovals user={user} />} />}
           <Route path="*" element={<div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, color: "#6b7280" }}>Page not found.</div>} />

@@ -4,12 +4,14 @@
 // auto-approve follows the same "approvers confirm their own requests
 // instantly" rule Room Booking uses.
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CGL, VEHICLE } from "../../data/car.js";
 import { todayStr, nowStr } from "../../lib/helpers.js";
 import { inp, lbl } from "../../styles/shared.js";
 import { useCarBookings } from "../lib/useCarBookings.js";
 import { sendCarRequestEmails, sendCarDecisionEmail } from "../lib/carEmail.js";
 import CarSchedulePicker from "../components/CarSchedulePicker.jsx";
+import BulkBookCar from "../components/BulkBookCar.jsx";
 import PageWrap from "../components/PageWrap.jsx";
 
 // Only a CONFIRMED booking blocks a slot — same deliberate rule
@@ -23,8 +25,11 @@ function hasConflict(bookings, date, startTime, endTime) {
 }
 
 function BookCar({ user }) {
-  const { bookings, reload, insertRow } = useCarBookings();
-  const [date, setDate] = useState(todayStr());
+  const { bookings, reload, insertRow, insertRows } = useCarBookings();
+  // ?date= lets the monthly overview's "Book this day" link land here with
+  // the date pre-filled (see CarMonth.jsx) — falls back to today otherwise.
+  const [searchParams] = useSearchParams();
+  const [date, setDate] = useState(() => searchParams.get("date") || todayStr());
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const [purpose, setPurpose] = useState("");
@@ -32,6 +37,8 @@ function BookCar({ user }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [done, setDone] = useState(null);
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null); // {count, autoApprove}
 
   const dayBookings = (bookings || []).filter(b => b.date === date && (b.status === "confirmed" || b.status === "pending"));
 
@@ -71,6 +78,29 @@ function BookCar({ user }) {
     }
   }
 
+  // Bulk request — same auto-approve rule as a single booking, but no
+  // per-item email: matches Room Booking's own handleBulkBook (App.jsx),
+  // which doesn't email either. A flood of N identical confirmation/
+  // request emails for one bulk submission isn't wanted; the on-screen
+  // banner below is the confirmation instead. insertRows does the whole
+  // batch in one Supabase request rather than looping insertRow.
+  async function handleBulkBook(dates, bulkPurpose, bulkStart, bulkEnd, bulkNotes) {
+    const autoApprove = user.isApprover;
+    const payloads = dates.map(d => ({
+      requested_by: user.name,
+      requested_by_email: user.email,
+      date: d, start_time: bulkStart, end_time: bulkEnd,
+      purpose: bulkPurpose.trim(), notes: (bulkNotes || "").trim() || null,
+      status: autoApprove ? "confirmed" : "pending",
+      approved_by: autoApprove ? user.name : null,
+      approved_at: autoApprove ? nowStr() : null,
+    }));
+    await insertRows("car_bookings", payloads);
+    setBulkResult({ count: payloads.length, autoApprove });
+    setShowBulk(false);
+    reload();
+  }
+
   if (done) {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: 40, textAlign: "center" }}>
@@ -88,6 +118,19 @@ function BookCar({ user }) {
 
   return (
     <PageWrap backTo="/car" title={"Book " + VEHICLE.name} subtitle="Pick a date and time, then say what it's for.">
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+        <button type="button" onClick={() => setShowBulk(true)} style={{ background: CGL.lavender + "30", color: CGL.blackcurrant, border: "1px solid " + CGL.lavender + "60", borderRadius: 8, padding: "8px 14px", fontSize: 12, cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }}>⊞ Book multiple dates</button>
+      </div>
+
+      {bulkResult && (
+        <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: 10, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 13, color: "#16a34a", fontWeight: 700 }}>
+            {bulkResult.count} booking{bulkResult.count !== 1 ? "s" : ""} {bulkResult.autoApprove ? "confirmed" : "requested — you'll get an email once each is approved"}.
+          </div>
+          <button onClick={() => setBulkResult(null)} style={{ background: "none", border: "none", color: "#16a34a", fontWeight: 800, cursor: "pointer", fontSize: 16, lineHeight: 1 }}>×</button>
+        </div>
+      )}
+
       <form onSubmit={submit}>
         <div style={{ marginBottom: 16 }}>
           <label style={lbl}>Date</label>
@@ -112,6 +155,15 @@ function BookCar({ user }) {
           {saving ? "Booking…" : user.isApprover ? "Confirm booking" : "Request booking"}
         </button>
       </form>
+
+      {showBulk && (
+        <BulkBookCar
+          bookings={bookings || []}
+          onBook={handleBulkBook}
+          onClose={() => setShowBulk(false)}
+          currentUser={user}
+        />
+      )}
     </PageWrap>
   );
 }

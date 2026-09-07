@@ -43,6 +43,7 @@ function CarHome() {
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 24 }}>
         <Link to="/car/book" style={{ background: CGL.saffron, color: "#fff", textDecoration: "none", borderRadius: 10, padding: "12px 20px", fontWeight: 800, fontSize: 14 }}>Book the car →</Link>
+        <Link to="/car/month" style={{ background: "#fff", border: "1.5px solid #e5e7eb", color: CGL.blackcurrant, textDecoration: "none", borderRadius: 10, padding: "12px 20px", fontWeight: 700, fontSize: 14 }}>Month view</Link>
         <Link to="/car/mine" style={{ background: "#fff", border: "1.5px solid #e5e7eb", color: CGL.blackcurrant, textDecoration: "none", borderRadius: 10, padding: "12px 20px", fontWeight: 700, fontSize: 14 }}>My bookings</Link>
       </div>
 

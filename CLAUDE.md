@@ -154,6 +154,32 @@ plain JS (not TypeScript) project with no test suite yet.
     `recipientsFor()`'s "book for someone else" handling — Car Booking has
     no "book for someone else" option (nothing stops it being added later
     the same way Room Booking has it, just wasn't asked for here).
+  - `CarMonth.jsx` (`/car/month`) is a Mon-Sun month-grid overview —
+    designed fresh, not adapted, since Room Booking has no monthly view of
+    its own to copy (only `WeeklyView.jsx`/`DailyView.jsx`); the grid
+    maths (padding to a Monday start, trimming to just the weeks the month
+    needs) is original to this component. Each day cell shows up to 3
+    bookings as small chips (green = confirmed, amber = pending, "+N more"
+    beyond that) and a "+ Book" link that goes to `/car/book?date=...` —
+    `BookCar.jsx` reads that query param (`useSearchParams`) to pre-fill
+    the date, falling back to today when it's absent, same `?tab=`-style
+    pattern the rest of the app uses for email/link deep-linking.
+  - `BulkBookCar.jsx` is a trimmed copy of Room Booking's
+    `BulkBookingForm.jsx` modal, opened from a "Book multiple dates"
+    button on `BookCar.jsx` — cut down to two modes instead of three
+    ("Pick specific dates" and "Every weekday in a range"; there's no
+    "multiple rooms" mode since there's only one vehicle), reusing the
+    same 60-booking cap and per-item `hasConflict()` check (its own local
+    copy, same reasoning as `BookCar.jsx`'s). `BookCar.jsx`'s
+    `handleBulkBook` batches the insert in one call via `insertRows`
+    (`src/lib/staffApi.js`) rather than looping `insertRow`, and —
+    deliberately matching Room Booking's own `handleBulkBook` in
+    `App.jsx`, which doesn't email either — sends **no** per-item email;
+    a bulk request of N dates would otherwise mean N near-identical
+    emails. The on-screen result banner on `BookCar.jsx` (dismissible,
+    "N bookings confirmed/requested") is the confirmation instead. Same
+    auto-approve rule as a single booking: an approver's own bulk request
+    confirms every date immediately.
 - `APPROVERS` in `src/data/rooms.js` is the full authorization model for
   approving bookings — it's just an email allowlist, no real auth. Adding
   someone means adding their email there.
