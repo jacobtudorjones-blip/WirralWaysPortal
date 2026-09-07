@@ -302,6 +302,18 @@ plain JS (not TypeScript) project with no test suite yet.
   depends on it. Don't add `formatClock`/`formatElapsed` back into
   WhoIsIn.jsx, SignOut.jsx, or StartFinishFlow.jsx's finish list without
   checking this is still what's wanted.
+- `PrivacyPolicy.jsx` (`/staff/privacy`) covers the **whole portal**, not
+  just the Staff Portal half — Room Booking links to it too
+  (`IdentityScreen.jsx`), as does the Landing page. It names the actual
+  third parties involved (Supabase for storage, Netlify for hosting,
+  Brevo for email) rather than speaking generically about "secure
+  storage". When a change adds a new category of personal data (a new
+  table/column that stores a name, email, location, or similar) or a new
+  place data gets shared (a new notification recipient, a new external
+  service), update this page in the same change — it's a real,
+  user-facing legal notice, not just internal documentation, so it drifts
+  out of accuracy just as easily as README/CLAUDE.md do if it's treated
+  as an afterthought.
 - Leave (`staff_leave` table) and non-working days
   (`staff_users.non_working_days`) are two different things, both
   editable at `/staff/leave` — leave is one-off date ranges (annual

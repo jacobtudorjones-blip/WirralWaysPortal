@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { CGL, APPROVERS } from "../data/rooms.js";
 import { norm } from "../lib/helpers.js";
 import { nameFromEmail } from "../lib/nameFromEmail.js";
@@ -90,7 +91,10 @@ function IdentityScreen({ onIdentify }) {
             onMouseOver={e=>{if(!checking)e.target.style.opacity="0.9";}} onMouseOut={e=>{if(!checking)e.target.style.opacity="1";}}>
             {checking?"Checking…":"Continue →"}
           </button>
-          <div style={{textAlign:"center",fontSize:12,color:"#999",marginTop:16}}>Your email is used only to manage your bookings.</div>
+          <div style={{textAlign:"center",fontSize:12,color:"#999",marginTop:16}}>
+            Your email is used only to manage your bookings.{" "}
+            <Link to="/staff/privacy" style={{color:CGL.blackcurrant,fontWeight:700}}>Privacy notice →</Link>
+          </div>
         </div>
       </div>
     </div>

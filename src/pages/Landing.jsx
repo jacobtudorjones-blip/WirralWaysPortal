@@ -52,6 +52,7 @@ function Landing() {
       <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 28, textAlign: "center" }}>
         More sections coming soon.
       </div>
+      <Link to="/staff/privacy" style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 12 }}>Privacy notice</Link>
     </div>
   );
 }

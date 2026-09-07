@@ -249,8 +249,11 @@ new — see below), `/staff/who` (live roll-call view, **PIN-gated** — see
 below), `/staff/leave` (leave and non-working days — see below),
 `/staff/admin` (dashboard, gated to `role IN ('admin', 'manager')`),
 `/staff/admin/users` (add/edit/deactivate/delete staff, gated to
-`role = 'admin'`), `/staff/privacy` (what's recorded and why — linked
-from every form that collects a name/location/timestamp).
+`role = 'admin'`), `/staff/privacy` (what's recorded and why — covers
+the whole portal, not just Staff Portal, and names Supabase/Netlify/
+Brevo as the third parties involved; linked from every form that
+collects a name/location/timestamp, and from Room Booking's
+`IdentityScreen.jsx` and the Landing page too).
 
 **`/staff/sign-in` is unified** — one screen offering the four office
 sites *and* Working From Home / Working Elsewhere / Outreach as equal
