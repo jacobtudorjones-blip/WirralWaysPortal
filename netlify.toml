@@ -32,3 +32,11 @@
 # UTC) and GMT (=22:00 UTC).
 [functions."auto-signout"]
   schedule = "*/15 21-22 * * *"
+
+# extend-recurring-bookings tops up "auto-continuing" recurring Room
+# Booking series to a rolling 3-month horizon (see the file) — no
+# self-gating needed, unlike the three above, since being an hour or so
+# off from midnight on the 1st doesn't matter for a monthly top-up the
+# way it would for a "fires at exactly 9:30am local time" report.
+[functions."extend-recurring-bookings"]
+  schedule = "0 4 1 * *"

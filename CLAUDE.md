@@ -330,6 +330,29 @@ plain JS (not TypeScript) project with no test suite yet.
   SQL import, which doesn't go through that flow at all. If a future
   automated email keyed off `booking.email` gets added, check whether it
   needs the same guard.
+- The September 2026 room log import only ever covered that one month —
+  a number of the imported bookings were actually recurring
+  clinics/groups (same room/title/weekday/time repeated across the
+  month) that would otherwise just stop appearing once September ended.
+  These were identified by a one-off diagnostic query, then converted
+  into real recurring series (shared `recurringGroupId`,
+  `isRecurring:true`, `recurrencePattern:"weekly"`) seeded a few months
+  ahead by a one-off SQL script (delivered, not committed — same
+  scratchpad-file pattern as `room_bookings_import.sql`). Genuinely
+  ongoing ("indefinite") continuation from there is handled by
+  `netlify/functions/extend-recurring-bookings.js`, a scheduled function
+  (1st of every month — see `netlify.toml`) that tops every such series
+  up to a rolling 3-month horizon, forever, without needing anyone to
+  ask again or re-run anything. It only ever touches a booking carrying
+  `autoContinue: true` — a marker field the seed script set that isn't
+  read anywhere else in the app — so an ordinary recurring booking
+  someone makes through `BookingForm.jsx`'s "Recurring booking" tickbox
+  is never affected; that keeps whatever fixed end date the person who
+  created it actually chose. Never set `autoContinue` on a normal
+  user-made booking. Same "no request/confirmed emails, no Exchange
+  calendar sync" exception as the original bulk import — these are
+  administrative continuations of an existing series, not someone
+  actively booking something new through the app.
 - Both Room Booking and Car Booking sync confirmed bookings onto real
   Exchange shared calendars, **going forward only** — the already-imported
   September 2026 log isn't resynced back, since it came FROM those very
