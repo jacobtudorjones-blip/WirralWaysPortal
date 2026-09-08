@@ -287,6 +287,46 @@ plain JS (not TypeScript) project with no test suite yet.
   SQL import, which doesn't go through that flow at all. If a future
   automated email keyed off `booking.email` gets added, check whether it
   needs the same guard.
+- Both Room Booking and Car Booking sync confirmed bookings onto real
+  Exchange shared calendars, **going forward only** — the already-imported
+  September 2026 log isn't resynced back, since it came FROM those very
+  calendars in the first place (see `GENERIC_BOOKING_EMAIL`'s bullet
+  above and `supabase/room-booking-schema.sql`). `ROOM_CALENDAR_EMAIL`
+  (`src/data/rooms.js`) maps every room id to its `Q0084.*@cgl.org.uk`
+  mailbox; `CAR_CALENDAR_EMAIL` (`src/data/car.js`) is the car's
+  (`Q0084.CarLog@cgl.org.uk`). `lib/ics.js`'s `buildCalendarInviteICS()`
+  is the shared, room/vehicle-agnostic iTIP builder (METHOD:REQUEST to
+  add, METHOD:CANCEL to remove) — deliberately separate from that file's
+  existing `buildICS()`, which builds a personal "add to my own calendar"
+  file (no ORGANIZER/ATTENDEE/METHOD) for the download button and
+  confirmation-email attachment, a different iCalendar use case. Room
+  Booking's `App.jsx` has a local `syncRoomCalendar(booking, stage)`;
+  Car Booking's `car/lib/carEmail.js` has `syncCarCalendar()` — same
+  shape, not shared, matching this project's usual "small local copy"
+  approach for logic that's genuinely per-app (mailbox lookup, sender
+  identity, description text). `stage` is `"created"` (SEQUENCE 0),
+  `"edited"` (SEQUENCE 1 — Room Booking only, since Car Booking has no
+  edit feature) or `"cancelled"` (SEQUENCE 2, METHOD:CANCEL) — a fixed
+  tiering rather than a persisted running counter, correct for the
+  realistic common case but won't perfectly supersede more than one edit
+  before a cancellation. Only ever called for bookings that reach/leave
+  `"confirmed"` — a pending request being rejected, or a bulk item that
+  stayed pending, never had a calendar entry to remove. Wired into every
+  path that changes confirmed status: `handleBook`/`handleApprove`/
+  `handleBulkBook`'s auto-approve branches, `handleCancelClick`/
+  `handleCancelWithScope`, `handleEdit`, and the auto-release effect
+  (App.jsx); `BookCar.jsx`'s submit/bulk auto-approve branches,
+  `CarApprovals.jsx`'s approve, `MyCarBookings.jsx`'s cancel.
+  **Caveat**: Brevo (the only way this project sends email — see the
+  Brevo bullet above) is a transactional ESP, not a mail client speaking
+  full calendaring MIME — it can only attach the .ics conventionally
+  rather than inline it as the message's primary `text/calendar` body
+  the way Outlook natively inviting a room would. Many Exchange resource
+  mailboxes still auto-process a well-formed METHOD:REQUEST attachment
+  fine (how most third-party booking tools integrate with Exchange
+  rooms), but this hasn't been confirmed against Wirral Ways' actual
+  mailbox configuration — test with one real booking per app and check
+  the target Outlook calendar before relying on this.
 - `netlify/functions/manager-report.js` is a *scheduled* function
   (`netlify.toml`'s cron is `*/15 8-10 * * *` — restricted to 8-10am UTC,
   not all day, to avoid burning a function invocation every 15 minutes

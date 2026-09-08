@@ -9,7 +9,7 @@ import { CGL, VEHICLE } from "../../data/car.js";
 import { todayStr, nowStr } from "../../lib/helpers.js";
 import { inp, lbl } from "../../styles/shared.js";
 import { useCarBookings } from "../lib/useCarBookings.js";
-import { sendCarRequestEmails, sendCarDecisionEmail } from "../lib/carEmail.js";
+import { sendCarRequestEmails, sendCarDecisionEmail, syncCarCalendar } from "../lib/carEmail.js";
 import CarSchedulePicker from "../components/CarSchedulePicker.jsx";
 import BulkBookCar from "../components/BulkBookCar.jsx";
 import PageWrap from "../components/PageWrap.jsx";
@@ -66,6 +66,7 @@ function BookCar({ user }) {
       const created = await insertRow("car_bookings", payload);
       if (autoApprove) {
         await sendCarDecisionEmail("confirmed", created);
+        await syncCarCalendar(created, "created");
       } else {
         await sendCarRequestEmails(created);
       }
@@ -95,7 +96,12 @@ function BookCar({ user }) {
       approved_by: autoApprove ? user.name : null,
       approved_at: autoApprove ? nowStr() : null,
     }));
-    await insertRows("car_bookings", payloads);
+    const created = await insertRows("car_bookings", payloads);
+    // Each bulk item is its own distinct calendar slot on the car's
+    // mailbox, unlike the "no per-item email" rule above (that's about
+    // not flooding a person's inbox — this is a resource calendar that
+    // genuinely needs a separate entry per date to stay accurate).
+    if (autoApprove) (created || []).forEach(b => syncCarCalendar(b, "created"));
     setBulkResult({ count: payloads.length, autoApprove });
     setShowBulk(false);
     reload();

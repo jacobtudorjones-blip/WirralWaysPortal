@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CGL, APPROVERS, REQUEST_NOTIFY_EMAILS, GENERIC_BOOKING_EMAIL, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
+import { CGL, APPROVERS, REQUEST_NOTIFY_EMAILS, GENERIC_BOOKING_EMAIL, ROOM_CALENDAR_EMAIL, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
 import { genId, norm, todayStr, toDateStr, nowStr, formatDate, formatDateShort, formatTime } from "./lib/helpers.js";
 import { slotToMins } from "./lib/slots.js";
 import { loadKey, saveKey } from "./lib/storage.js";
 import { addToWaitlist, notifyWaitlist } from "./lib/waitlist.js";
 import { sendEmail } from "./lib/email.js";
 import { buildHtmlEmail } from "./lib/emailHtml.js";
-import { buildICS } from "./lib/ics.js";
+import { buildICS, buildCalendarInviteICS } from "./lib/ics.js";
 import { nameFromEmail } from "./lib/nameFromEmail.js";
 import { inp } from "./styles/shared.js";
 import IdentityScreen from "./components/IdentityScreen.jsx";
@@ -168,6 +168,10 @@ function App() {
         needsRelease.forEach(b=>{
           const roomName = ROOMS[b.roomId] ? ROOMS[b.roomId].name : b.roomId;
           notifyWaitlist(b.roomId, b.date, b.startTime, b.endTime, b.title);
+          // The room's genuinely free again (hasConflict() doesn't treat
+          // autoReleased as blocking) — remove the stale calendar entry
+          // rather than leaving the shared calendar showing it as booked.
+          syncRoomCalendar(b, "cancelled");
           addAudit("booking_cancelled",
             '"' + b.title + '" auto-released (no check-in after 30 min) — ' + roomName,
             "System"
@@ -238,6 +242,48 @@ function App() {
   function icsAttachment(booking) {
     const ics = buildICS(booking);
     return { name: "booking.ics", content: btoa(unescape(encodeURIComponent(ics))) };
+  }
+
+  // Keeps a room's real Exchange shared calendar (Q0084.*@cgl.org.uk — see
+  // ROOM_CALENDAR_EMAIL in data/rooms.js) in sync with what's confirmed in
+  // this app, going forward only — see that constant's comment for why
+  // the already-imported September log isn't resynced back (it came from
+  // these calendars in the first place). Call sites below pass a stage:
+  //   "created" — a brand new confirmed booking (auto-approve on request,
+  //     or a bulk item that auto-approved) → SEQUENCE 0
+  //   "edited"  — an already-confirmed booking's time changed → SEQUENCE 1
+  //   "cancelled" — a previously-confirmed booking got cancelled →
+  //     SEQUENCE 2, METHOD:CANCEL. Only ever called for bookings that
+  //     were actually confirmed (a pending request rejected/cancelled
+  //     never had a calendar entry to remove).
+  // The fixed 0/1/2 tiering (rather than a persisted running counter) is
+  // a deliberate simplification — correct for the realistic common case
+  // (create, maybe one edit, maybe cancel) but won't perfectly supersede
+  // if a booking is edited more than once before being cancelled.
+  const CALENDAR_SEQUENCE = { created: 0, edited: 1, cancelled: 2 };
+  function syncRoomCalendar(booking, stage) {
+    const mailbox = ROOM_CALENDAR_EMAIL[booking.roomId];
+    if (!mailbox) return; // no mailbox mapped for this room — skip silently
+    const room = ROOMS[booking.roomId];
+    const method = stage === "cancelled" ? "CANCEL" : "REQUEST";
+    const ics = buildCalendarInviteICS({
+      uid: booking.id + "-calsync@wirralways.org.uk",
+      method,
+      sequence: CALENDAR_SEQUENCE[stage],
+      date: booking.date, startTime: booking.startTime, endTime: booking.endTime,
+      summary: booking.title + " — " + room.name,
+      description: "Booked by: " + booking.bookedBy
+        + (booking.notes ? "\nRequirements: " + booking.notes : "")
+        + "\n\nSynced automatically from the Wirral Ways Portal (portal.wirralways.org.uk/rooms). Don't edit this event directly here — changes made in the portal will overwrite it.",
+      location: room.name + ", " + room.site + ", Wirral Ways",
+      organizerEmail: "rooms@wirralways.org.uk", organizerName: "Wirral Ways Room Booking",
+      attendeeEmail: mailbox, attendeeName: room.name,
+    });
+    const subject = (stage === "cancelled" ? "Cancelled: " : "") + booking.title + " — " + formatDateShort(booking.date);
+    const body = stage === "cancelled"
+      ? "This booking has been cancelled and should be removed from " + room.name + "'s calendar."
+      : "This booking is confirmed on " + room.name + "'s calendar via the Wirral Ways Portal.";
+    sendEmail(mailbox, subject, body, { name: "invite.ics", content: btoa(unescape(encodeURIComponent(ics))) }, undefined, undefined);
   }
 
   // When a booking was made on someone else's behalf (bookingForOther),
@@ -345,6 +391,7 @@ function App() {
       createdAt:nowStr(),
     }));
     persistB([...bookings,...newBookings]);
+    if(autoApprove) newBookings.forEach(nb=>syncRoomCalendar(nb,"created"));
     const room=ROOMS[form.roomId];
     addAudit(
       autoApprove ? "booking_approved" : "booking_requested",
@@ -384,6 +431,7 @@ function App() {
       createdAt: nowStr(),
     }));
     persistB([...bookings, ...newBookings]);
+    if(autoApprove) newBookings.forEach(nb=>syncRoomCalendar(nb,"created"));
     const roomNames = [...new Set(items.map(i=>ROOMS[i.roomId]?.name))].join(", ");
     addAudit(
       autoApprove ? "booking_approved" : "booking_requested",
@@ -397,6 +445,7 @@ function App() {
     const b=bookings.find(b=>b.id===id);
     const updated={...b,status:"confirmed",approvedBy:user.name,approvedAt:nowStr()};
     persistB(bookings.map(bk=>bk.id===id?updated:bk));
+    syncRoomCalendar(updated,"created");
     addAudit("booking_approved", user.name + " approved \"" + b.title + "\" — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name);
     const email=buildEmail("confirmed",updated);
     sendEmail(email.to,email.subject,email.body,icsAttachment(updated),undefined,email.html);
@@ -420,6 +469,9 @@ function App() {
     } else {
       // Non-recurring — cancel immediately
       persistB(bookings.map(bk=>bk.id===id?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk));
+      // Only had a calendar entry to remove if it was actually confirmed —
+      // a pending/rejected booking never got one in the first place.
+      if(b.status==="confirmed") syncRoomCalendar(b,"cancelled");
       addAudit("booking_cancelled", "\"" + b.title + "\" cancelled — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name);
     }
   }
@@ -427,17 +479,23 @@ function App() {
   function handleCancelWithScope(scope) {
     const b = cancelModal.booking;
     const gid = b.recurringGroupId;
+    const affects = scope==="one" ? bk=>bk.id===b.id
+                  : scope==="future" ? bk=>bk.recurringGroupId===gid&&bk.date>=b.date
+                  : bk=>bk.recurringGroupId===gid; // all
     let updated;
     if(scope==="one") {
-      updated = bookings.map(bk=>bk.id===b.id?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk);
+      updated = bookings.map(bk=>affects(bk)?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk);
       addAudit("booking_cancelled", "\"" + b.title + "\" cancelled (single) — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name);
     } else if(scope==="future") {
-      updated = bookings.map(bk=>bk.recurringGroupId===gid&&bk.date>=b.date?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk);
+      updated = bookings.map(bk=>affects(bk)?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk);
       addAudit("booking_cancelled", "\"" + b.title + "\" cancelled (from " + formatDateShort(b.date) + " onwards) — " + ROOMS[b.roomId].name, user.name);
     } else { // all
-      updated = bookings.map(bk=>bk.recurringGroupId===gid?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk);
+      updated = bookings.map(bk=>affects(bk)?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk);
       addAudit("booking_cancelled", "\"" + b.title + "\" cancelled (entire series) — " + ROOMS[b.roomId].name, user.name);
     }
+    // Only remove calendar entries for bookings that were actually
+    // confirmed (had one to remove) before this cancellation.
+    bookings.filter(bk=>affects(bk)&&bk.status==="confirmed").forEach(bk=>syncRoomCalendar(bk,"cancelled"));
     persistB(updated);
     setCancelModal(null);
   }
@@ -445,17 +503,24 @@ function App() {
   function handleEdit(id, applyTo, changes) {
     const b = bookings.find(b=>b.id===id);
     const gid = b.recurringGroupId;
+    const affects = applyTo==="one"||!gid ? bk=>bk.id===id
+                  : applyTo==="future" ? bk=>bk.recurringGroupId===gid&&bk.date>=b.date
+                  : bk=>bk.recurringGroupId===gid; // all
     let updated;
     if(applyTo==="one" || !gid) {
-      updated = bookings.map(bk=>bk.id===id?{...bk,...changes}:bk);
+      updated = bookings.map(bk=>affects(bk)?{...bk,...changes}:bk);
       addAudit("booking_approved", "\"" + b.title + "\" edited (single) — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name);
     } else if(applyTo==="future") {
-      updated = bookings.map(bk=>bk.recurringGroupId===gid&&bk.date>=b.date?{...bk,...changes}:bk);
+      updated = bookings.map(bk=>affects(bk)?{...bk,...changes}:bk);
       addAudit("booking_approved", "\"" + b.title + "\" edited (from " + formatDateShort(b.date) + " onwards) — " + ROOMS[b.roomId].name, user.name);
     } else { // all
-      updated = bookings.map(bk=>bk.recurringGroupId===gid?{...bk,...changes}:bk);
+      updated = bookings.map(bk=>affects(bk)?{...bk,...changes}:bk);
       addAudit("booking_approved", "\"" + b.title + "\" edited (entire series) — " + ROOMS[b.roomId].name, user.name);
     }
+    // Re-sync the calendar entry for anything already confirmed — the
+    // edit changed its time/title, so the old invite is now stale.
+    // Nothing to resync for a still-pending booking (no entry exists yet).
+    updated.filter(bk=>affects(bk)&&bk.status==="confirmed").forEach(bk=>syncRoomCalendar(bk,"edited"));
     persistB(updated);
     setEditModal(null);
   }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CGL } from "../../data/car.js";
 import { formatDateShort, formatTime, nowStr } from "../../lib/helpers.js";
 import { useCarBookings } from "../lib/useCarBookings.js";
-import { sendCarDecisionEmail } from "../lib/carEmail.js";
+import { sendCarDecisionEmail, syncCarCalendar } from "../lib/carEmail.js";
 import PageWrap from "../components/PageWrap.jsx";
 import { inp } from "../../styles/shared.js";
 
@@ -20,6 +20,7 @@ function CarApprovals({ user }) {
     setBusy(true);
     const updated = await updateRow("car_bookings", b.id, { status: "confirmed", approved_by: user.name, approved_at: nowStr() });
     await sendCarDecisionEmail("confirmed", updated);
+    await syncCarCalendar(updated, "created");
     reload();
     setBusy(false);
   }

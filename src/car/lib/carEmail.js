@@ -4,7 +4,8 @@
 // Car Booking doesn't have a "book for someone else" option yet).
 import { sendEmail } from "../../lib/email.js";
 import { buildHtmlEmail } from "../../lib/emailHtml.js";
-import { VEHICLE, CAR_REQUEST_NOTIFY_EMAILS } from "../../data/car.js";
+import { buildCalendarInviteICS } from "../../lib/ics.js";
+import { VEHICLE, CAR_REQUEST_NOTIFY_EMAILS, CAR_CALENDAR_EMAIL } from "../../data/car.js";
 import { formatDate, formatDateShort, formatTime } from "../../lib/helpers.js";
 
 const PORTAL_URL = "https://portal.wirralways.org.uk";
@@ -68,4 +69,34 @@ async function sendCarDecisionEmail(type, booking) {
   await sendEmail(email.to, email.subject, email.body, undefined, "car-booking", email.html);
 }
 
-export { buildCarEmail, sendCarRequestEmails, sendCarDecisionEmail };
+// Keeps the car's real Exchange shared calendar (CAR_CALENDAR_EMAIL —
+// Q0084.CarLog@cgl.org.uk — see data/car.js) in sync with what's
+// confirmed in this app, going forward only — same reasoning and same
+// fixed 0/1/2 sequence tiering as Room Booking's syncRoomCalendar() in
+// App.jsx (see that function's comment); Car Booking has no edit feature
+// so only "created"/"cancelled" are actually reachable here, but the
+// stage is kept generic for parity.
+const CALENDAR_SEQUENCE = { created: 0, edited: 1, cancelled: 2 };
+async function syncCarCalendar(booking, stage) {
+  const method = stage === "cancelled" ? "CANCEL" : "REQUEST";
+  const ics = buildCalendarInviteICS({
+    uid: booking.id + "-calsync@wirralways.org.uk",
+    method,
+    sequence: CALENDAR_SEQUENCE[stage],
+    date: booking.date, startTime: booking.start_time, endTime: booking.end_time,
+    summary: booking.purpose + " — " + VEHICLE.name,
+    description: "Booked by: " + booking.requested_by
+      + (booking.notes ? "\nNotes: " + booking.notes : "")
+      + "\n\nSynced automatically from the Wirral Ways Portal (portal.wirralways.org.uk/car). Don't edit this event directly here — changes made in the portal will overwrite it.",
+    location: VEHICLE.name,
+    organizerEmail: "rooms@wirralways.org.uk", organizerName: "Wirral Ways Car Booking",
+    attendeeEmail: CAR_CALENDAR_EMAIL, attendeeName: VEHICLE.name,
+  });
+  const subject = (stage === "cancelled" ? "Cancelled: " : "") + booking.purpose + " — " + formatDateShort(booking.date);
+  const body = stage === "cancelled"
+    ? "This booking has been cancelled and should be removed from the car's calendar."
+    : "This booking is confirmed on the car's calendar via the Wirral Ways Portal.";
+  await sendEmail(CAR_CALENDAR_EMAIL, subject, body, { name: "invite.ics", content: btoa(unescape(encodeURIComponent(ics))) }, "car-booking", undefined);
+}
+
+export { buildCarEmail, sendCarRequestEmails, sendCarDecisionEmail, syncCarCalendar };

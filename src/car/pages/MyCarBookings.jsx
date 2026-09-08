@@ -4,6 +4,7 @@
 import { CGL } from "../../data/car.js";
 import { formatDateShort, formatTime, nowStr } from "../../lib/helpers.js";
 import { useCarBookings } from "../lib/useCarBookings.js";
+import { syncCarCalendar } from "../lib/carEmail.js";
 import PageWrap from "../components/PageWrap.jsx";
 
 const STATUS_STYLE = {
@@ -17,8 +18,11 @@ function MyCarBookings({ user }) {
   const { bookings, reload, updateRow } = useCarBookings();
   const mine = (bookings || []).filter(b => b.requested_by_email === user.email);
 
-  async function cancel(id) {
-    await updateRow("car_bookings", id, { status: "cancelled", cancelled_by: user.name, cancelled_at: nowStr() });
+  async function cancel(b) {
+    await updateRow("car_bookings", b.id, { status: "cancelled", cancelled_by: user.name, cancelled_at: nowStr() });
+    // Only had a calendar entry to remove if it was actually confirmed —
+    // a still-pending request never got one in the first place.
+    if (b.status === "confirmed") await syncCarCalendar(b, "cancelled");
     reload();
   }
 
@@ -42,7 +46,7 @@ function MyCarBookings({ user }) {
                 <div style={{ fontSize: 12, color: "#555" }}>{formatDateShort(b.date)} · {formatTime(b.start_time)}–{formatTime(b.end_time)}</div>
                 {b.status === "rejected" && b.rejection_note && <div style={{ fontSize: 12, color: "#b71c1c", marginTop: 6 }}>Reason: {b.rejection_note}</div>}
                 {canCancel && (
-                  <button onClick={() => cancel(b.id)} style={{ marginTop: 10, background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: "#b91c1c", cursor: "pointer" }}>Cancel booking</button>
+                  <button onClick={() => cancel(b)} style={{ marginTop: 10, background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: "#b91c1c", cursor: "pointer" }}>Cancel booking</button>
                 )}
               </div>
             );

@@ -57,6 +57,48 @@ const REQUEST_NOTIFY_EMAILS = ["wirral.services@cgl.org.uk", "jacob.jones2@cgl.o
 // a reminder that lands on a shared inbox nobody's expecting it in.
 const GENERIC_BOOKING_EMAIL = "wirral.services@cgl.org.uk";
 
+// Each room's Exchange shared-calendar mailbox — going forward (not the
+// already-imported September log, which came FROM these very calendars),
+// a newly confirmed/cancelled booking in this app also sends a calendar
+// invite/cancellation here, so anyone still working from the Q0084
+// Outlook calendars sees it too. Keyed by room id, not name/slug, so a
+// room rename in RAW_ROOMS above doesn't silently break the mapping. See
+// App.jsx's syncRoomCalendar() for how this gets used, and
+// lib/ics.js's buildCalendarInviteICS() for the invite itself. A room
+// with no entry here (there shouldn't be one — every current room has a
+// mailbox) just skips the calendar sync silently rather than erroring.
+const ROOM_CALENDAR_EMAIL = {
+  ps_crag:        "Q0084.PriceStreetTheCrag@cgl.org.uk",
+  ps_ridge:       "Q0084.PriceStreetTheRidge@cgl.org.uk",
+  ps_basecamp:    "Q0084.PriceStreetBasecamp@cgl.org.uk",
+  ps_peak:        "Q0084.PriceStreetThePeak@cgl.org.uk",
+  ps_situation:   "Q0084.PriceStreet-SituationRoom@cgl.org.uk",
+  ps_wellbeing:   "Q0084.PriceStreetWellbeingZone@cgl.org.uk",
+  ms_sunflower:   "Q0084.MarketWellsSunflowerRoom@cgl.org.uk",
+  ms_autumn:      "Q0084.MarketWellsAutumnRoom@cgl.org.uk",
+  ms_mountain:    "Q0084.MarketWellsMountainRoom@cgl.org.uk",
+  ms_ocean:       "Q0084.MarketWellsOceanRoom@cgl.org.uk",
+  ms_meadow:      "Q0084.MarketWellsMeadowRoom@cgl.org.uk",
+  ms_river:       "Q0084.MarketWellsRiverRoom@cgl.org.uk",
+  ms_pebble:      "Q0084.MarketWellsPebbleRoom@cgl.org.uk",
+  ms_berry:       "Q0084.MarketWellsBerryRoom@cgl.org.uk",
+  ms_lavender:    "Q0084.MarketWellsLavenderRoom@cgl.org.uk",
+  ms_rose:        "Q0084.MarketWellsRoseRoom@cgl.org.uk",
+  ms_daffodil:    "Q0084.MarketWellsDaffodilRoom@cgl.org.uk",
+  ms_chrysalis:   "Q0084.MarketWellsChrysalisRoom@cgl.org.uk",
+  as_counselling: "Q0084.ArgyleStreetCounsellingRoom@cgl.org.uk",
+  as_group1:      "Q0084.ArgyleStreetFirstFloorGroupRoom@cgl.org.uk",
+  as_group2:      "Q0084.ArgyleStreet2ndFloorGroupRoom@cgl.org.uk",
+  bs_garden:      "Q0084.Wallasey-Garden-Prescribing@cgl.org.uk",
+  bs_primrose:    "Q0084.Wallasey-Primrose-GroupRoom@cgl.org.uk",
+  bs_orchid:      "Q0084.Wallasey-Orchid-GroupRoom@cgl.org.uk",
+  bs_daisy:       "Q0084.Wallasey-Daisy-GroupRoom@cgl.org.uk",
+  bs_bluebell:    "Q0084.Wallasey-Bluebell-ClinicRoom@cgl.org.uk",
+  bs_heather:     "Q0084.Wallasey-Heather-1to1@cgl.org.uk",
+  bs_forest:      "Q0084.Wallasey-Forest-1to1@cgl.org.uk",
+  bs_fern:        "Q0084.Wallasey-Fern-1to1@cgl.org.uk",
+};
+
 // ─── GENERIC FLOOR PLAN LAYOUT ────────────────────────────────────────────────
 function genericLayout(capacity = 4) {
   const cols = Math.min(capacity, 4);
@@ -168,4 +210,4 @@ const SITES = ["Price Street","Market Street","Argyle Street","Brighton Street"]
 // unique in practice; if two ever collide the later one in RAW_ROOMS wins.
 const ROOM_BY_SLUG = Object.fromEntries(ROOM_LIST.map(r => [r.slug, r]));
 
-export { CGL, SITE_COLOR, APPROVERS, REQUEST_NOTIFY_EMAILS, GENERIC_BOOKING_EMAIL, ROOMS, ROOM_LIST, ROOM_BY_SLUG, ROOM_TYPES, SITES };
+export { CGL, SITE_COLOR, APPROVERS, REQUEST_NOTIFY_EMAILS, GENERIC_BOOKING_EMAIL, ROOM_CALENDAR_EMAIL, ROOMS, ROOM_LIST, ROOM_BY_SLUG, ROOM_TYPES, SITES };

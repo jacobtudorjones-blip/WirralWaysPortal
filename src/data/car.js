@@ -28,4 +28,10 @@ const CAR_APPROVERS = APPROVERS;
 // two addresses Room Booking uses.
 const CAR_REQUEST_NOTIFY_EMAILS = ["wirral.services@cgl.org.uk", "jacob.jones2@cgl.org.uk"];
 
-export { CGL, VEHICLE, CAR_APPROVERS, CAR_REQUEST_NOTIFY_EMAILS };
+// The car's own Exchange shared-calendar mailbox — same "going forward"
+// calendar sync as Room Booking's ROOM_CALENDAR_EMAIL (src/data/rooms.js),
+// see that constant's comment for the full reasoning. Used by
+// car/lib/carEmail.js's syncCarCalendar().
+const CAR_CALENDAR_EMAIL = "Q0084.CarLog@cgl.org.uk";
+
+export { CGL, VEHICLE, CAR_APPROVERS, CAR_REQUEST_NOTIFY_EMAILS, CAR_CALENDAR_EMAIL };
