@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CGL, APPROVERS, REQUEST_NOTIFY_EMAILS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
+import { CGL, APPROVERS, REQUEST_NOTIFY_EMAILS, GENERIC_BOOKING_EMAIL, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
 import { genId, norm, todayStr, toDateStr, nowStr, formatDate, formatDateShort, formatTime } from "./lib/helpers.js";
 import { slotToMins } from "./lib/slots.js";
 import { loadKey, saveKey } from "./lib/storage.js";
@@ -121,7 +121,13 @@ function App() {
     const due = bookings.filter(b=>
       b.status==="confirmed" &&
       b.date===tomorrowStr &&
-      !b.reminderSent
+      !b.reminderSent &&
+      // Skip bookings recorded under the generic placeholder identity —
+      // recurring clinics/groups with no real attendee attached (see
+      // GENERIC_BOOKING_EMAIL in data/rooms.js). Nobody's actually
+      // expecting a "your booking is tomorrow" reminder to land in that
+      // shared inbox.
+      norm(b.email)!==norm(GENERIC_BOOKING_EMAIL)
     );
     if(due.length===0) return;
     async function sendReminders() {

@@ -279,6 +279,23 @@ plain JS (not TypeScript) project with no test suite yet.
   `buildHtmlEmail()` and pass `htmlContent` as well as `textContent`,
   not just concatenate a URL into the plain-text body and assume it's
   clickable.
+- `GENERIC_BOOKING_EMAIL` (`src/data/rooms.js`, currently
+  `wirral.services@cgl.org.uk`) is the placeholder booker identity used
+  for bookings that don't belong to any one named person — recurring
+  clinics/groups/services with no real attendee, e.g. most of the
+  September 2026 room log that was bulk-imported directly into
+  `ww_bookings` (SQL, not through the app — see
+  `supabase/room-booking-schema.sql`'s header comment). `App.jsx`'s
+  reminder-email effect skips any booking whose `email` matches it —
+  nobody's expecting a "your booking is tomorrow" reminder to land in
+  that shared inbox for a booking that was never really "for" anyone.
+  This is reminder-only on purpose: it doesn't touch the
+  request/confirmed/rejected/approver-notify emails, since those only
+  ever fire from a real person actively making/approving/rejecting a
+  booking through the app — a generic-booked row only exists from a bulk
+  SQL import, which doesn't go through that flow at all. If a future
+  automated email keyed off `booking.email` gets added, check whether it
+  needs the same guard.
 - `netlify/functions/manager-report.js` is a *scheduled* function
   (`netlify.toml`'s cron is `*/15 8-10 * * *` — restricted to 8-10am UTC,
   not all day, to avoid burning a function invocation every 15 minutes

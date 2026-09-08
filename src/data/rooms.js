@@ -47,6 +47,16 @@ const APPROVERS = [
 // full approver list.
 const REQUEST_NOTIFY_EMAILS = ["wirral.services@cgl.org.uk", "jacob.jones2@cgl.org.uk"];
 
+// The identity used as the booker/email on bookings that don't belong to
+// any one named person — recurring clinics, groups and services imported
+// from the September 2026 room log with no attendee attached (e.g. "Stop
+// Smoking", "COPD Clinic", "NA"). Same address as REQUEST_NOTIFY_EMAILS
+// above by coincidence, not by relation — this one exists so booking-time
+// automation (see App.jsx's reminder-email effect) can recognise "this
+// booking has no real person to email" and skip them, rather than sending
+// a reminder that lands on a shared inbox nobody's expecting it in.
+const GENERIC_BOOKING_EMAIL = "wirral.services@cgl.org.uk";
+
 // ─── GENERIC FLOOR PLAN LAYOUT ────────────────────────────────────────────────
 function genericLayout(capacity = 4) {
   const cols = Math.min(capacity, 4);
@@ -158,4 +168,4 @@ const SITES = ["Price Street","Market Street","Argyle Street","Brighton Street"]
 // unique in practice; if two ever collide the later one in RAW_ROOMS wins.
 const ROOM_BY_SLUG = Object.fromEntries(ROOM_LIST.map(r => [r.slug, r]));
 
-export { CGL, SITE_COLOR, APPROVERS, REQUEST_NOTIFY_EMAILS, ROOMS, ROOM_LIST, ROOM_BY_SLUG, ROOM_TYPES, SITES };
+export { CGL, SITE_COLOR, APPROVERS, REQUEST_NOTIFY_EMAILS, GENERIC_BOOKING_EMAIL, ROOMS, ROOM_LIST, ROOM_BY_SLUG, ROOM_TYPES, SITES };
