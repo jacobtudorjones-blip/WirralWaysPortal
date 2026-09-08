@@ -2,7 +2,6 @@ import { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import Landing from "./pages/Landing.jsx";
-import PinGate from "./components/PinGate.jsx";
 
 // Lazy-loaded as separate chunks: visiting one section never downloads
 // another's code — they don't share screen time, so there's no reason to
@@ -14,44 +13,6 @@ const CarApp = lazy(() => import("./car/CarApp.jsx"));
 
 function LoadingFallback() {
   return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontFamily: "system-ui,sans-serif" }}>Loading…</div>;
-}
-
-// TEMPORARY: Room Booking is PIN-locked while in testing. To reopen it,
-// delete this component and go back to mounting <App /> directly on the
-// /rooms/* route below. PinGate needs a flex/minHeight ancestor to center
-// itself (App.jsx normally provides that once it renders) — since this
-// sits in front of App rather than inside it, it provides its own.
-function RoomsLock() {
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#faf8fc" }}>
-      <PinGate
-        storageKey="ww_rooms_testing_pin"
-        pin="1335"
-        title="Room Booking"
-        subtitle="In testing mode — coming soon. To book a room, please contact wirral.services@cgl.org.uk."
-      >
-        <App />
-      </PinGate>
-    </div>
-  );
-}
-
-// TEMPORARY: same testing lock as Room Booking, same code — see
-// RoomsLock's comment above for how to remove this once Car Booking's
-// ready to go live.
-function CarLock() {
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "#faf8fc" }}>
-      <PinGate
-        storageKey="ww_car_testing_pin"
-        pin="1335"
-        title="Car Booking"
-        subtitle="In testing mode — coming soon. To book the car, please contact wirral.services@cgl.org.uk."
-      >
-        <CarApp />
-      </PinGate>
-    </div>
-  );
 }
 
 function NotFound() {
@@ -75,13 +36,10 @@ root.render(
         <Route path="/" element={<Landing />} />
         {/* Staff sign-in/out portal — its own multi-page section, own router. */}
         <Route path="/staff/*" element={<StaffApp />} />
-        {/* Room Booking: /rooms (browse) and /rooms/:slug (a specific room).
-            TEMPORARY: PIN-locked while in testing — see RoomsLock above.
-            To reopen it, swap this back to element={<App />}. */}
-        <Route path="/rooms/*" element={<RoomsLock />} />
-        {/* Car Booking — one shared vehicle. TEMPORARY: PIN-locked while
-            in testing, same as Room Booking — see CarLock above. */}
-        <Route path="/car/*" element={<CarLock />} />
+        {/* Room Booking: /rooms (browse) and /rooms/:slug (a specific room). */}
+        <Route path="/rooms/*" element={<App />} />
+        {/* Car Booking — one shared vehicle. */}
+        <Route path="/car/*" element={<CarApp />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

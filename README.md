@@ -12,7 +12,7 @@ A portal hub plus three apps, one Vite + React project, one deploy:
   directory) — approve/reject requests, check people in, and view
   analytics and an audit log. Individual rooms have their own URL, e.g.
   `/rooms/meadow-room` — shareable, bookmarkable, and what clicking a room
-  card takes you to. **Currently PIN-locked for testing** (code `1335`).
+  card takes you to.
 - **Staff Portal** (`/staff`) — sign in/out for health & safety and lone
   working, working-from-home and working-elsewhere tracking, outreach
   tracking, a live "who's in" roll-call view, and a staff directory with
@@ -23,8 +23,7 @@ A portal hub plus three apps, one Vite + React project, one deploy:
   Booking, scaled down for a single resource instead of many rooms across
   sites. Also has a month-view calendar overview (`/car/month`) and a
   bulk-booking option (multiple specific dates, or every weekday across a
-  date range, all in one request). **Currently PIN-locked for testing
-  too** (same code, `1335`).
+  date range, all in one request).
 
 Both original apps (Room Booking, Staff Portal) started life as single
 self-contained `index.html` files (React + Babel / plain JS loaded from
@@ -307,13 +306,10 @@ other gate in this app: client-side, extractable from the shipped JS, a
 deterrent not real security. It also never shows sign-in/start times,
 only presence — see the note in CLAUDE.md.
 
-**Room Booking is currently PIN-locked for testing** (`main.jsx`'s
-`RoomsLock`, code `1335`, same `PinGate.jsx` as above) — visiting
-`/rooms/*` shows "In testing mode — coming soon" with a contact email
-instead of the app, until the right code is entered, at which point it's
-the real app in full. This is temporary and sits entirely in `main.jsx`
-in front of `App.jsx`, not inside it — remove `RoomsLock` and go back to
-mounting `<App />` directly on the `/rooms/*` route to reopen it properly.
+Room Booking and Car Booking were both PIN-locked behind a similar
+`main.jsx` wrapper (`RoomsLock`/`CarLock`, same `PinGate.jsx` as above)
+while in testing; both have since been opened up — `/rooms/*` and
+`/car/*` mount `App.jsx`/`CarApp.jsx` directly again, no PIN required.
 
 **Not a public site:** `public/robots.txt` disallows crawling entirely, and
 there's no analytics on either app — the Staff Portal specifically records

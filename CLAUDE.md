@@ -34,9 +34,7 @@ deploy (see README.md for the full picture):
   `components/`, `lib/` under `src/car/`, its own identity screen
   (`CarIdentityScreen.jsx`, CGL-email-only, checks `CAR_APPROVERS`), and
   its own Supabase table (`car_bookings` — see
-  `supabase/car-booking-schema.sql`). **Currently PIN-locked for testing**
-  (code `1335`, same as Room Booking — see `main.jsx`'s `CarLock`) — see
-  that section below for how the pattern works and how to remove it.
+  `supabase/car-booking-schema.sql`).
 
 Routing lives in `src/main.jsx`: `/` mounts `Landing`, `/staff/*` mounts
 `StaffApp`, `/rooms/*` mounts the Room Booking `App`, `/car/*` mounts
@@ -93,21 +91,14 @@ plain JS (not TypeScript) project with no test suite yet.
 
 ## Things worth knowing before changing behaviour
 
-- **Room Booking is currently PIN-locked for testing** — `main.jsx`'s
-  `RoomsLock` wraps `<App />` on the `/rooms/*` route in a `PinGate`
-  (code `1335`) showing "In testing mode — coming soon. To book a room,
-  please contact wirral.services@cgl.org.uk." until unlocked; once
-  unlocked in a tab it stays unlocked for that session (sessionStorage,
-  key `ww_rooms_testing_pin`). This is deliberately temporary and lives
-  entirely in `main.jsx`, not inside `App.jsx` — nothing about
-  `IdentityScreen.jsx`/APPROVERS changed. To reopen Room Booking properly,
-  delete `RoomsLock` and change the `/rooms/*` route back to
-  `element={<App />}`.
-- **Car Booking is currently PIN-locked for testing too** — same pattern,
-  same code (`1335`), `main.jsx`'s `CarLock` this time (`storageKey`
-  `ww_car_testing_pin`, separate from Room Booking's so unlocking one
-  doesn't unlock the other). Remove the same way: delete `CarLock`,
-  change `/car/*` back to `element={<CarApp />}`.
+- Room Booking and Car Booking both used to be PIN-locked behind a
+  `RoomsLock`/`CarLock` wrapper (`main.jsx`, `PinGate`, code `1335`) while
+  in testing — both were opened up (the wrappers removed, `/rooms/*` and
+  `/car/*` mount `<App />`/`<CarApp />` directly again) once testing was
+  done. `PinGate` (`src/components/PinGate.jsx`) is still used elsewhere
+  (Who's In, code `886` — see below) and is written generically (`pin` as
+  a prop) specifically so it could be reused for this kind of temporary
+  lock again if either app ever needs one.
 - Car Booking (`src/car/`) deliberately duplicates a few small things
   from Room Booking rather than sharing them, on the theory that a
   second, much simpler booking flow was cheaper to keep independent than
