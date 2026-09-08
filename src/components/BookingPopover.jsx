@@ -29,12 +29,9 @@ function BookingPopover({ booking, currentUser, isApprover, onApprove, onReject,
           </span>
           {booking.isRecurring&&<span style={{fontSize:10,color:"#666",border:"1px solid "+(CGL.lavender),padding:"2px 7px",borderRadius:10}}>🔁 Recurring</span>}
         </div>
-        {/* Who it's for is the headline — a generic title like "1-1" on its
-            own doesn't say much; the person's name is what's actually
-            useful at a glance here. */}
-        <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e",marginBottom:3}}>{booking.bookedBy}{booking.bookedForOther&&booking.requestedBy&&<span style={{color:CGL.saffron,fontWeight:700}}> — requested by {booking.requestedBy}</span>}</div>
+        <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e",marginBottom:3}}>{booking.title}</div>
         <div style={{fontSize:12,color:"#444",marginBottom:2}}>{formatDateShort(booking.date)} &bull; {formatTime(booking.startTime)}–{formatTime(booking.endTime)}</div>
-        <div style={{fontSize:12,color:"#666",marginBottom:2}}>{booking.title}</div>
+        <div style={{fontSize:12,color:"#666",marginBottom:2}}>{booking.bookedBy}{booking.bookedForOther&&booking.requestedBy&&<span style={{color:CGL.saffron}}> — requested by {booking.requestedBy}</span>}</div>
         {booking.checkedIn&&<div style={{fontSize:11,color:"#1a7a4a",fontWeight:700,marginBottom:booking.notes?6:2}}>✓ Checked in</div>}
         {booking.notes&&<div style={{fontSize:11,color:"#555",background:"#f8f5fc",borderRadius:6,padding:"5px 8px",marginBottom:6,fontStyle:"italic"}}>📝 {booking.notes}</div>}
         {/* Actions */}

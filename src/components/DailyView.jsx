@@ -180,16 +180,13 @@ function DailyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, on
                         return (
                           <td key={slot} colSpan={span}
                             onClick={e=>handleBookingClick(e,bk)}
-                            title={bk.title}
+                            title={bk.bookedBy}
                             style={{background:isPendingBk?"#fff3cd":room.color+"28",borderLeft:"2px solid "+(isPendingBk?"#d4a017":room.color),padding:"3px 6px",verticalAlign:"middle",cursor:"pointer"}}>
-                            {/* Who it's for, not the (often generic — "1-1",
-                                "Group session") title, is the useful thing to
-                                see at a glance here. */}
                             <div style={{fontSize:10,fontWeight:800,color:isPendingBk?"#7a5c00":room.color,lineHeight:1.3,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
-                              {isPendingBk?"⏳ ":""}{bk.isRecurring?"🔁 ":""}{bk.bookedBy}
+                              {isPendingBk?"⏳ ":""}{bk.isRecurring?"🔁 ":""}{bk.title}
                             </div>
                             <div style={{fontSize:9,color:isPendingBk?"#7a5c00":room.color,fontWeight:600,whiteSpace:"nowrap"}}>
-                              {formatTime(bk.startTime)}–{formatTime(bk.endTime)}{isPendingBk?" · Pending":""}
+                              {bk.bookedBy.split(" ")[0]} &bull; {formatTime(bk.startTime)}–{formatTime(bk.endTime)}{isPendingBk?" · Pending":""}
                             </div>
                           </td>
                         );
