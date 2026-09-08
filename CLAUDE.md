@@ -374,11 +374,13 @@ plain JS (not TypeScript) project with no test suite yet.
   user's id becomes the sign-in record's `user_id`. `visitor` requires
   picking a real directory entry as the host (a second `NamePicker`) —
   submit is blocked without one, since `lib/notify.js`'s
-  `sendVisitorNotification` needs a real email. Every entry point that
-  can resolve an email for the person signing in (matched, or
-  self-registered) also fires `sendSignInAck` — both live in
-  `src/staff/lib/notify.js`, wired into `SignIn.jsx` and
-  `StartFinishFlow.jsx`'s `submitStart`.
+  `sendVisitorNotification` needs a real email. There used to also be a
+  `sendSignInAck` — a "you've signed in" confirmation to the person
+  themselves, fired from every start action — removed on request: staff
+  were getting one on every ordinary sign-in and it added up to a lot of
+  email. `sendVisitorNotification` is the only function left in
+  `src/staff/lib/notify.js`; don't reintroduce a per-sign-in self-email
+  without checking this is still wanted.
 - `/staff/sign-out` is unified the same way sign-in is — pulls open
   records from all four attendance tables (`staff_sign_ins` +
   `staff_wfh`/`staff_elsewhere`/`staff_outreach`) and normalises them into
@@ -398,16 +400,12 @@ plain JS (not TypeScript) project with no test suite yet.
   whenever `search` is empty) — this isn't a directory to browse, so
   nothing shows who's currently signed in and where until you're
   specifically searching for yourself.
-- Outreach has manager notifications at both ends, plus a safety-net
-  alert if someone goes quiet — all three live in `src/staff/lib/notify.js`
-  and only fire when the person has a `manager_id` on file with an email:
-  - **Starting** outreach (`SignIn.jsx`, and `StartFinishFlow.jsx`'s
-    `submitStart`) emails the manager where the person's gone and when
-    they're expected back (`sendOutreachStartNotification`).
-  - **Returning** (the dedicated Outreach page's "Finishing" tab, *and*
-    the unified `/staff/sign-out` page — both close the same
-    `staff_outreach` row) emails the manager that they're back safe
-    (`sendOutreachReturnNotification`).
+- Outreach used to email the manager at both the start and end of a trip,
+  in addition to the overdue alert — `sendOutreachStartNotification`/
+  `sendOutreachReturnNotification`, both removed on request (managers
+  only want to hear about outreach when something's actually wrong, not
+  on every routine start/return). Only the safety-net alert below is
+  left:
   - **Overdue** (`netlify/functions/outreach-overdue-alert.js`, scheduled
     every 15 minutes during roughly 6am-8pm UTC per `netlify.toml`) emails
     the manager if someone is 15+ minutes past their `expected_return` and

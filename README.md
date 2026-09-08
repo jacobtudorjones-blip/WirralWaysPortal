@@ -293,10 +293,10 @@ site is pre-filled from wherever they're signing in. Picking `visitor`
 asks who they're here to see (another `NamePicker`, must resolve to a
 real directory entry since we need a real email) and, on sign-in, emails
 that person a heads-up (`lib/notify.js`'s `sendVisitorNotification`).
-Anyone we have an email for — matched, or just self-registered — also
-gets a sign-in confirmation email (`sendSignInAck`, same file), from
-every entry point (unified Sign In and each dedicated Wfh/Elsewhere/
-Outreach page's "Starting" tab).
+There's no confirmation email to the person signing in themselves, or to
+managers on a routine outreach start/return — both were removed after
+staff feedback about email volume; only outreach's overdue alert (a
+scheduled function, not this file) still emails a manager.
 
 **`/staff/who` is PIN-gated, not email-gated** — matches the original
 app's design (a shared access code in front of live location data, not

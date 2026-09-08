@@ -28,7 +28,7 @@ import { inp, lbl } from "../../styles/shared.js";
 import { insertRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { closeAnyOpenRecordForUser } from "../lib/attendance.js";
-import { sendSignInAck, sendVisitorNotification, sendOutreachStartNotification } from "../lib/notify.js";
+import { sendVisitorNotification } from "../lib/notify.js";
 import NamePicker from "../components/NamePicker.jsx";
 import PageWrap from "../components/PageWrap.jsx";
 import PrivacyNote from "../components/PrivacyNote.jsx";
@@ -84,7 +84,6 @@ function SignIn() {
     setError(null);
     try {
       let effectiveUserId = userId;
-      let selfEmail = null;
 
       // Self-registering an unrecognised "staff" sign-in.
       if (showAddSelf && newEmail.trim()) {
@@ -97,9 +96,6 @@ function SignIn() {
           active: true,
         });
         effectiveUserId = created.id;
-        selfEmail = created.email;
-      } else if (userId) {
-        selfEmail = activeUsers.find(u => u.id === userId)?.email || null;
       }
 
       if (effectiveUserId) await closeAnyOpenRecordForUser(effectiveUserId);
@@ -115,15 +111,9 @@ function SignIn() {
 
       await insertRow(table, payload);
 
-      if (selfEmail) sendSignInAck(selfEmail, name.trim(), dest.label);
       if (showVisitorHost && hostId) {
         const host = activeUsers.find(u => u.id === hostId);
         if (host) sendVisitorNotification(host.email, host.name, name.trim(), dest.label);
-      }
-      if (table === "staff_outreach" && effectiveUserId) {
-        const person = activeUsers.find(u => u.id === effectiveUserId);
-        const manager = person?.manager_id ? activeUsers.find(u => u.id === person.manager_id) : null;
-        if (manager) sendOutreachStartNotification(manager.email, manager.name, name.trim(), location.trim(), expectedReturn);
       }
 
       setDone(true);

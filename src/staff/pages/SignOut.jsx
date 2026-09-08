@@ -4,8 +4,6 @@ import { CGL } from "../../data/rooms.js";
 import { REMOTE_MODES } from "../../data/staff.js";
 import { norm } from "../../lib/helpers.js";
 import { listRows, updateRow } from "../../lib/staffApi.js";
-import { useStaffUsers } from "../lib/useStaffUsers.js";
-import { sendOutreachReturnNotification } from "../lib/notify.js";
 import { initials } from "../lib/format.js";
 import { inp } from "../../styles/shared.js";
 import PageWrap from "../components/PageWrap.jsx";
@@ -61,7 +59,6 @@ const FILTER_LABELS = {
 };
 
 function SignOut() {
-  const { activeUsers } = useStaffUsers();
   const [searchParams] = useSearchParams();
   const filterTable = FILTER_LABELS[searchParams.get("filter")] ? searchParams.get("filter") : null;
   const [entries, setEntries] = useState(null);
@@ -82,11 +79,6 @@ function SignOut() {
 
   async function confirmSignOut() {
     await updateRow(confirming.table, confirming.id, { [confirming.closeField]: new Date().toISOString() });
-    if (confirming.table === "staff_outreach" && confirming.userId) {
-      const person = activeUsers.find(u => u.id === confirming.userId);
-      const manager = person?.manager_id ? activeUsers.find(u => u.id === person.manager_id) : null;
-      if (manager) sendOutreachReturnNotification(manager.email, manager.name, confirming.name);
-    }
     setDone(confirming);
     setConfirming(null);
     load();

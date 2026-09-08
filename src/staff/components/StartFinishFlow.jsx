@@ -10,7 +10,6 @@ import { inp, lbl } from "../../styles/shared.js";
 import { insertRow, listRows, updateRow } from "../../lib/staffApi.js";
 import { useStaffUsers } from "../lib/useStaffUsers.js";
 import { closeAnyOpenRecordForUser } from "../lib/attendance.js";
-import { sendSignInAck, sendOutreachStartNotification, sendOutreachReturnNotification } from "../lib/notify.js";
 import { initials } from "../lib/format.js";
 import NamePicker from "./NamePicker.jsx";
 import PageWrap from "./PageWrap.jsx";
@@ -45,12 +44,6 @@ function StartFinishFlow({ table, title, subtitle, color, fields = [] }) {
     try {
       if (userId) await closeAnyOpenRecordForUser(userId);
       await insertRow(table, { name: name.trim(), user_id: userId, notes: notes.trim() || null, start_time: new Date().toISOString(), ...extra });
-      const self = userId ? activeUsers.find(u => u.id === userId) : null;
-      if (self) sendSignInAck(self.email, name.trim(), title);
-      if (table === "staff_outreach" && self?.manager_id) {
-        const manager = activeUsers.find(u => u.id === self.manager_id);
-        if (manager) sendOutreachStartNotification(manager.email, manager.name, name.trim(), extra.location, extra.expected_return);
-      }
       setDone({ kind: "start", name: name.trim() });
       setName(""); setUserId(null); setExtra({}); setNotes("");
     } catch (err) { setError(err.message || String(err)); }
@@ -61,11 +54,6 @@ function StartFinishFlow({ table, title, subtitle, color, fields = [] }) {
     setSaving(true); setError(null);
     try {
       await updateRow(table, entry.id, { returned_time: new Date().toISOString() });
-      if (table === "staff_outreach" && entry.user_id) {
-        const person = activeUsers.find(u => u.id === entry.user_id);
-        const manager = person?.manager_id ? activeUsers.find(u => u.id === person.manager_id) : null;
-        if (manager) sendOutreachReturnNotification(manager.email, manager.name, entry.name);
-      }
       setDone({ kind: "finish", name: entry.name });
       loadOpen();
     } catch (err) { setError(err.message || String(err)); }
