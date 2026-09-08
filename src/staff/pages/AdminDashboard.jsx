@@ -86,7 +86,7 @@ function DashboardBody({ currentUser }) {
         style={{ padding: "8px 12px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, marginBottom: 12, width: 220 }}
       />
       <div style={{ overflowX: "auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+        <table style={{ width: "100%", minWidth: 520, borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#faf8fc" }}>
               {["Name", "Site", "Type", "In", "Out"].map(h => (

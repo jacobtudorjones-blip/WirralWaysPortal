@@ -65,7 +65,7 @@ function UsersBody() {
       {error && <div style={{ color: CGL.neon, fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
       <div style={{ overflowX: "auto", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#faf8fc" }}>
               {["Name", "Email", "Site", "Role", "Manager", "Status", ""].map(h => (
