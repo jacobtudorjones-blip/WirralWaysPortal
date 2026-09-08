@@ -16,6 +16,7 @@ import RoomInfoCard from "./components/RoomInfoCard.jsx";
 import BookingCard from "./components/BookingCard.jsx";
 import AuditRow from "./components/AuditRow.jsx";
 import EmailNotificationPreview from "./components/EmailNotificationPreview.jsx";
+import RoomPhoto from "./components/RoomPhoto.jsx";
 import LiveClock from "./components/LiveClock.jsx";
 import EditBookingModal from "./components/EditBookingModal.jsx";
 import CancelScopeModal from "./components/CancelScopeModal.jsx";
@@ -762,11 +763,7 @@ function App() {
                       </div>
                       <button onClick={()=>{setPreRoom(room.id);setShowForm(true);}} style={{background:room.color,color:"white",border:"none",borderRadius:8,padding:"8px 14px",fontSize:11,cursor:"pointer",fontWeight:700,fontFamily:"inherit",flexShrink:0}}>Request</button>
                     </div>
-                    <div style={{background:"linear-gradient(135deg,"+(CGL.blackcurrant)+"08,"+(CGL.amethyst)+"10)",border:"2px dashed "+(CGL.lavender),borderRadius:12,padding:"48px 20px",textAlign:"center"}}>
-                      <div style={{fontSize:40,marginBottom:12}}>🗺️</div>
-                      <div style={{fontWeight:800,fontSize:16,color:CGL.blackcurrant,marginBottom:8}}>Floor plan coming soon</div>
-                      <div style={{fontSize:13,color:"#999",lineHeight:1.7}}>We're putting together detailed floor plans for all rooms.<br/>Check back shortly.</div>
-                    </div>
+                    <RoomPhoto room={room} key={room.id}/>
                   </div>
                   {/* Day schedule */}
                   <div style={{background:"white",borderRadius:14,padding:20,border:"1px solid "+(CGL.lavender),boxShadow:"0 2px 12px rgba(94,27,109,0.06)"}}>

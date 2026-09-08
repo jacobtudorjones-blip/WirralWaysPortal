@@ -217,6 +217,33 @@ plain JS (not TypeScript) project with no test suite yet.
   `r.types.includes(filters.type)` rather than `r.type === filters.type`.
   When adding a room, give it a `types` array (one or more of the 5
   tags), not a bare `type` string.
+- Room photos work the same way site photos already did for Staff Portal
+  (`SiteTile.jsx`, `public/sites/*.jpg`): every room gets a computed
+  `image = "/rooms/" + slug + ".jpg"` field in `data/rooms.js`'s `ROOMS`
+  mapping, and dropping a same-named file in `public/rooms/` (e.g.
+  `public/rooms/meadow-room.jpg`) is all that's needed to make it show —
+  no code change, no rebuild-required config. No room photos ship with
+  this repo yet, so this degrades gracefully until real ones are added:
+  `RoomInfoCard.jsx` (room list cards) tracks its own `imageFailed` state
+  via the `<img>`'s `onError` and just doesn't render the image tag when
+  one 404s (falls back to its existing "No photo yet" note instead of the
+  old always-shown placeholder text). The Floor Plans tab's enlarged
+  detail panel uses the same pattern but via a dedicated component,
+  `RoomPhoto.jsx`, rather than inline state — that panel lives inside an
+  IIFE in `App.jsx` (see "Room deep links" above for why that IIFE
+  exists) and can't hold its own `useState`, so the onError/fallback
+  logic had to be extracted into a real component; `App.jsx` passes
+  `key={room.id}` at the call site so switching rooms resets the fallback
+  flag instead of carrying over a stale "failed" state from the previous
+  room. The small per-room thumbnails in the Floor Plans tab's "All
+  rooms" compact grid below the detail panel are a separate, still-static
+  "🗺️ Floor plan coming soon" placeholder — deliberately not wired to
+  `room.image` here, since those cards are small (175px) name/type click
+  targets to switch `activeRoom`, not a photo display; worth revisiting
+  if that changes. `FloorPlan.jsx` (an SVG-generated room diagram) is
+  unrelated to any of this and remains genuinely dead code — grep confirms
+  nothing imports it — left in place, not removed, since nothing asked
+  for that.
 - Booking emails are real (`sendEmail`), not simulated — `App.jsx` used to
   call a `simulateEmail()` that only logged to the console for every
   request/confirmed/rejected/reminder/approver-notify email; that's gone.

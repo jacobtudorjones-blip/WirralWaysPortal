@@ -190,19 +190,31 @@ const PS_LAYOUTS = {
 const LAYOUT_MAP = { detailed_crag: PS_LAYOUTS.detailed_crag };
 
 const ROOMS = Object.fromEntries(
-  RAW_ROOMS.map(r => [r.id, {
-    ...r,
-    slug: slugify(r.name),
-    color: SITE_COLOR[r.site] || CGL.blackcurrant,
-    layout: (r.layout && LAYOUT_MAP[r.layout]) || genericLayout(typeof r.capacity === "number" ? r.capacity : 4),
-    isPlaceholder: !(r.layout && LAYOUT_MAP[r.layout]),
-    // Backward-compatible display string for every place that just shows
-    // `room.type` as text (RoomInfoCard, BookingForm's option labels,
-    // etc.) — those need no changes. Filtering should use `types` (the
-    // array) directly instead, so a room tagged both "121 Room" and
-    // "Group Room" matches either filter, not just a combined label.
-    type: r.types.join(" / "),
-  }])
+  RAW_ROOMS.map(r => {
+    const slug = slugify(r.name);
+    return [r.id, {
+      ...r,
+      slug,
+      color: SITE_COLOR[r.site] || CGL.blackcurrant,
+      layout: (r.layout && LAYOUT_MAP[r.layout]) || genericLayout(typeof r.capacity === "number" ? r.capacity : 4),
+      isPlaceholder: !(r.layout && LAYOUT_MAP[r.layout]),
+      // A real photo of the room, expected at this path under public/
+      // (e.g. public/rooms/meadow-room.jpg) — same convention as
+      // OFFICE_SITES' `image` in data/staff.js (public/sites/*.jpg): drop
+      // a same-named file in there and it's picked up automatically, no
+      // code change needed. No room photos ship with this repo yet — this
+      // degrades gracefully (RoomInfoCard.jsx / App.jsx's Floor Plans tab
+      // both fall back to a placeholder via onError) until real ones are
+      // added, same as sites did before their photos existed.
+      image: "/rooms/" + slug + ".jpg",
+      // Backward-compatible display string for every place that just shows
+      // `room.type` as text (RoomInfoCard, BookingForm's option labels,
+      // etc.) — those need no changes. Filtering should use `types` (the
+      // array) directly instead, so a room tagged both "121 Room" and
+      // "Group Room" matches either filter, not just a combined label.
+      type: r.types.join(" / "),
+    }];
+  })
 );
 const ROOM_LIST = Object.values(ROOMS);
 // Canonical, deduplicated room-type tags in a sensible fixed order (not

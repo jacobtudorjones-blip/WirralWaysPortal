@@ -3,11 +3,16 @@ import { CGL } from "../data/rooms.js";
 
 function RoomInfoCard({ room, onRequest, onView }) {
   const [expanded, setExpanded] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = room.image && !imageFailed;
   return (
     <div style={{background:"white",borderRadius:12,border:"1.5px solid "+(CGL.lavender),borderTop:"4px solid "+(room.color),overflow:"hidden",boxShadow:"0 2px 8px rgba(94,27,109,0.06)",transition:"box-shadow 0.2s",cursor:onView?"pointer":"default"}}
       onClick={onView}
       onMouseOver={e=>e.currentTarget.style.boxShadow="0 6px 20px rgba(94,27,109,0.12)"}
       onMouseOut={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(94,27,109,0.06)"}>
+      {showImage && (
+        <img src={room.image} alt="" onError={()=>setImageFailed(true)} style={{width:"100%",height:120,objectFit:"cover",display:"block"}}/>
+      )}
       <div style={{padding:"14px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
           <div style={{display:"flex",alignItems:"center",gap:7}}>
@@ -41,7 +46,7 @@ function RoomInfoCard({ room, onRequest, onView }) {
             <div><strong>AV equipment:</strong> {room.av||"None listed"}</div>
             <div><strong>Accessibility:</strong> {room.accessibility||"Details to be confirmed"}</div>
             {room.notes&&<div><strong>Notes:</strong> {room.notes}</div>}
-            {room.isPlaceholder&&<div style={{marginTop:6,color:CGL.amethyst,fontSize:11,fontStyle:"italic"}}>Floor plan: placeholder — to be updated</div>}
+            {!showImage&&<div style={{marginTop:6,color:CGL.amethyst,fontSize:11,fontStyle:"italic"}}>No photo yet — add one at public/rooms/{room.slug}.jpg</div>}
           </div>
         )}
 
