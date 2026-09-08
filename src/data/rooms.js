@@ -37,7 +37,7 @@ const APPROVERS = [
   { email: "helen.davies@cgl.org.uk" },
   { email: "toni.kaklamanis@cgl.org.uk" },
   { email: "yvonne.mcgrath@cgl.org.uk" },
-  { email: "jack.lawson@cgl.org.uk" },
+  { email: "jack.joseph@cgl.org.uk" },
   { email: "april.collings@cgl.org.uk" },
 ];
 
