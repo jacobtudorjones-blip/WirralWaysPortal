@@ -65,13 +65,29 @@ function CarSchedulePicker({ date, dayBookings, startTime, endTime, onChange }) 
     setDragging(false); setDragStart(null); setDragEnd(null);
   }
 
+  // Touch equivalent of the mouseDown/mouseEnter/mouseUp drag-select above
+  // — see DaySchedulePicker.jsx's copy of this comment for why touch needs
+  // its own handling (no per-cell mouseenter as a finger drags across the
+  // grid, unlike a real mouse pointer).
+  function handleTouchStart(i) {
+    handleMouseDown(i);
+  }
+  function handleTouchMove(e) {
+    if (!dragging) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest("[data-slot-idx]");
+    if (!el) return;
+    handleMouseEnter(parseInt(el.dataset.slotIdx, 10));
+  }
+
   const color = CGL.blackcurrant;
   const hourRows = [];
   for (let i = 0; i < SLOTS.length - 1; i += 2) hourRows.push([i, i + 1]);
 
   return (
     <div style={{ marginBottom: 16 }} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-      <label style={lbl}>Select time — click and drag to choose your slot *</label>
+      <label style={lbl}>Select time — tap or drag to choose your slot *</label>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, padding: "8px 12px", background: selStart && selEnd ? color + "12" : CGL.grey, borderRadius: 8, border: "1px solid " + (selStart && selEnd ? color + "44" : CGL.lavender), transition: "all 0.2s" }}>
         {selStart && selEnd ? (
@@ -104,7 +120,10 @@ function CarSchedulePicker({ date, dayBookings, startTime, endTime, onChange }) 
         ))}
       </div>
 
-      <div style={{ border: "1.5px solid " + CGL.lavender, borderRadius: 10, overflow: "hidden", userSelect: "none", cursor: "crosshair" }}>
+      <div
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseUp}
+        style={{ border: "1.5px solid " + CGL.lavender, borderRadius: 10, overflow: "hidden", userSelect: "none", cursor: "crosshair", touchAction: "none" }}>
         <div style={{ display: "grid", gridTemplateColumns: "44px 1fr", background: CGL.blackcurrant }}>
           <div style={{ padding: "5px 0", textAlign: "center", fontSize: 9, fontWeight: 800, color: CGL.orchid, letterSpacing: 1 }}>TIME</div>
           <div style={{ padding: "5px 8px", fontSize: 9, fontWeight: 800, color: CGL.orchid, letterSpacing: 1 }}>
@@ -130,8 +149,10 @@ function CarSchedulePicker({ date, dayBookings, startTime, endTime, onChange }) 
                 const cursor = (confirmed || pending) ? "not-allowed" : "crosshair";
                 return (
                   <div key={i}
+                    data-slot-idx={i}
                     onMouseDown={() => handleMouseDown(i)}
                     onMouseEnter={() => handleMouseEnter(i)}
+                    onTouchStart={() => handleTouchStart(i)}
                     style={{ height: 28, background: bgColor, borderLeft: i === i1 ? "1px dashed " + CGL.lavender : "none", cursor, transition: "background 0.08s", display: "flex", alignItems: "center", paddingLeft: 6, position: "relative" }}>
                     {confirmed && label && i === i0 && <span style={{ fontSize: 9, fontWeight: 700, color: "#dc2626", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", maxWidth: "90%" }}>🔒 {label}</span>}
                     {pending && label && i === i0 && <span style={{ fontSize: 9, fontWeight: 700, color: "#7a5c00", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", maxWidth: "90%" }}>⏳ {label}</span>}
@@ -144,7 +165,7 @@ function CarSchedulePicker({ date, dayBookings, startTime, endTime, onChange }) 
           );
         })}
       </div>
-      <div style={{ fontSize: 11, color: "#555", marginTop: 6, fontWeight: 600 }}>Tip: click a single slot for a 30-minute booking, or drag across multiple slots for longer.</div>
+      <div style={{ fontSize: 11, color: "#555", marginTop: 6, fontWeight: 600 }}>Tip: tap a single slot for a 30-minute booking, or drag across multiple slots for longer.</div>
     </div>
   );
 }

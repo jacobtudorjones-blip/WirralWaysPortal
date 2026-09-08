@@ -63,6 +63,26 @@ function DaySchedulePicker({ date, roomId, bookings, startTime, endTime, onChang
     setDragging(false); setDragStart(null); setDragEnd(null);
   }
 
+  // Touch equivalent of the mouseDown/mouseEnter/mouseUp drag-select above.
+  // A touch drag only ever fires its move/end events on the element the
+  // finger started on — unlike mouse, there's no per-cell mouseenter as
+  // the finger crosses other cells — so handleTouchMove has to work out
+  // which slot is currently under the finger itself, via
+  // document.elementFromPoint() + each cell's data-slot-idx (set below).
+  // This was the actual reported bug: without this, dragging to select a
+  // time range silently did nothing on a phone/tablet.
+  function handleTouchStart(i) {
+    handleMouseDown(i);
+  }
+  function handleTouchMove(e) {
+    if(!dragging) return;
+    const touch = e.touches[0];
+    if(!touch) return;
+    const el = document.elementFromPoint(touch.clientX, touch.clientY)?.closest("[data-slot-idx]");
+    if(!el) return;
+    handleMouseEnter(parseInt(el.dataset.slotIdx, 10));
+  }
+
   const room = ROOMS[roomId];
   const color = room?.color || CGL.blackcurrant;
   const hourRows = [];
@@ -70,7 +90,7 @@ function DaySchedulePicker({ date, roomId, bookings, startTime, endTime, onChang
 
   return (
     <div style={{marginBottom:16}} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-      <label style={lbl}>Select time — click and drag to choose your slot *</label>
+      <label style={lbl}>Select time — tap or drag to choose your slot *</label>
 
       {/* Selection summary */}
       <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10,padding:"8px 12px",background:selStart&&selEnd?color+"12":CGL.grey,borderRadius:8,border:"1px solid "+(selStart&&selEnd?color+"44":CGL.lavender),transition:"all 0.2s"}}>
@@ -106,7 +126,10 @@ function DaySchedulePicker({ date, roomId, bookings, startTime, endTime, onChang
       </div>
 
       {/* Grid */}
-      <div style={{border:"1.5px solid "+(CGL.lavender),borderRadius:10,overflow:"hidden",userSelect:"none",cursor:"crosshair"}}>
+      <div
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseUp}
+        style={{border:"1.5px solid "+(CGL.lavender),borderRadius:10,overflow:"hidden",userSelect:"none",cursor:"crosshair",touchAction:"none"}}>
         <div style={{display:"grid",gridTemplateColumns:"44px 1fr",background:CGL.blackcurrant}}>
           <div style={{padding:"5px 0",textAlign:"center",fontSize:9,fontWeight:800,color:CGL.orchid,letterSpacing:1}}>TIME</div>
           <div style={{padding:"5px 8px",fontSize:9,fontWeight:800,color:CGL.orchid,letterSpacing:1}}>
@@ -135,13 +158,16 @@ function DaySchedulePicker({ date, roomId, bookings, startTime, endTime, onChang
                 const bkForSlot = confirmed&&i===i0 ? confirmedBookings.find(b=>slotToMins(b.startTime)<em&&slotToMins(b.endTime)>sm) : null;
                 return (
                   <div key={i}
+                    data-slot-idx={i}
                     onMouseDown={()=>handleMouseDown(i)}
                     onMouseEnter={()=>handleMouseEnter(i)}
+                    onTouchStart={()=>handleTouchStart(i)}
                     style={{height:28,background:bgColor,borderLeft:i===i1?"1px dashed "+(CGL.lavender):"none",cursor,transition:"background 0.08s",display:"flex",alignItems:"center",paddingLeft:6,position:"relative"}}>
                     {confirmed&&label&&i===i0&&<span style={{fontSize:9,fontWeight:700,color:"#dc2626",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",maxWidth:onWaitlist?"60%":"90%"}}>🔒 {label}</span>}
                     {confirmed&&i===i0&&onWaitlist&&bkForSlot&&(
                       <button
                         onMouseDown={e=>e.stopPropagation()}
+                        onTouchStart={e=>e.stopPropagation()}
                         onClick={e=>{e.stopPropagation();onWaitlist(bkForSlot);}}
                         style={{position:"absolute",right:4,fontSize:8,fontWeight:700,color:CGL.amethyst,background:"white",border:"1px solid "+(CGL.amethyst)+"55",borderRadius:4,padding:"1px 5px",cursor:"pointer",fontFamily:"inherit",lineHeight:1.4}}
                         title="Notify me if this slot becomes free">
@@ -158,7 +184,7 @@ function DaySchedulePicker({ date, roomId, bookings, startTime, endTime, onChang
           );
         })}
       </div>
-      <div style={{fontSize:11,color:"#555",marginTop:6,fontWeight:600}}>Tip: click a single slot for a 30-minute booking, or drag across multiple slots for longer.</div>
+      <div style={{fontSize:11,color:"#555",marginTop:6,fontWeight:600}}>Tip: tap a single slot for a 30-minute booking, or drag across multiple slots for longer.</div>
     </div>
   );
 }
