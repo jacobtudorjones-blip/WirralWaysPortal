@@ -232,14 +232,18 @@ function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, o
                                 return (
                                   <div key={bk.id}
                                     onClick={e=>handleCellClick(e,bk)}
+                                    title={bk.title}
                                     style={{borderRadius:6,padding:"4px 6px",
                                       background:isPendingBk?"#fff3cd":room.color+"22",
                                       border:"1.5px solid "+(isPendingBk?"#d4a017":room.color),
                                       cursor:"pointer",transition:"opacity 0.1s"}}
                                     onMouseOver={e=>e.currentTarget.style.opacity="0.8"}
                                     onMouseOut={e=>e.currentTarget.style.opacity="1"}>
+                                    {/* Who it's for, not the (often generic — "1-1",
+                                        "Group session") title, is the useful thing to
+                                        see at a glance here. */}
                                     <div style={{fontSize:10,fontWeight:800,color:isPendingBk?"#7a5c00":room.color,lineHeight:1.3,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",maxWidth:90}}>
-                                      {isPendingBk?"⏳ ":""}{bk.isRecurring?"🔁 ":""}{bk.title}
+                                      {isPendingBk?"⏳ ":""}{bk.isRecurring?"🔁 ":""}{bk.bookedBy}
                                     </div>
                                     <div style={{fontSize:9,color:isPendingBk?"#7a5c00":room.color,fontWeight:600}}>
                                       {formatTime(bk.startTime)}–{formatTime(bk.endTime)}
