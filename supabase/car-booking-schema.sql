@@ -33,6 +33,14 @@ create table if not exists car_bookings (
 
 create index if not exists car_bookings_date_idx on car_bookings (date) where status in ('pending','confirmed');
 
+-- "Book for someone else" — mirrors Room Booking's bookingForOther:
+-- requested_by/requested_by_email above stays whoever actually submitted
+-- the request; these two are set only when it's on someone else's behalf,
+-- and are null for the (still far more common) case of booking for
+-- yourself. See src/car/pages/BookCar.jsx and src/car/lib/carEmail.js.
+alter table car_bookings add column if not exists booked_for       text;
+alter table car_bookings add column if not exists booked_for_email text;
+
 alter table car_bookings enable row level security;
 
 drop policy if exists car_bookings_anon_all on car_bookings;

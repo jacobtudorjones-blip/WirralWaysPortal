@@ -16,7 +16,10 @@ const STATUS_STYLE = {
 
 function MyCarBookings({ user }) {
   const { bookings, reload, updateRow } = useCarBookings();
-  const mine = (bookings || []).filter(b => b.requested_by_email === user.email);
+  // Shows up here whether this person requested it themselves, or someone
+  // else booked it for them ("book for someone else" — see BookCar.jsx) —
+  // same either/or match as Room Booking's myBookings in App.jsx.
+  const mine = (bookings || []).filter(b => b.requested_by_email === user.email || b.booked_for_email === user.email);
 
   async function cancel(b) {
     await updateRow("car_bookings", b.id, { status: "cancelled", cancelled_by: user.name, cancelled_at: nowStr() });
@@ -44,6 +47,7 @@ function MyCarBookings({ user }) {
                   <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 20, whiteSpace: "nowrap" }}>{s.label}</span>
                 </div>
                 <div style={{ fontSize: 12, color: "#555" }}>{formatDateShort(b.date)} · {formatTime(b.start_time)}–{formatTime(b.end_time)}</div>
+                {b.booked_for_email && <div style={{ fontSize: 12, color: CGL.saffron, marginTop: 2 }}>{b.booked_for_email === user.email ? "Booked for you by " + b.requested_by : "Booked for " + b.booked_for}</div>}
                 {b.status === "rejected" && b.rejection_note && <div style={{ fontSize: 12, color: "#b71c1c", marginTop: 6 }}>Reason: {b.rejection_note}</div>}
                 {canCancel && (
                   <button onClick={() => cancel(b)} style={{ marginTop: 10, background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, color: "#b91c1c", cursor: "pointer" }}>Cancel booking</button>

@@ -141,10 +141,26 @@ plain JS (not TypeScript) project with no test suite yet.
     documented below) for what's cosmetically a different "from" name.
   - Approving/rejecting/requesting all send real emails
     (`car/lib/carEmail.js`), same event set as Room Booking
-    (requested/confirmed/rejected/approver_notify) minus
-    `recipientsFor()`'s "book for someone else" handling — Car Booking has
-    no "book for someone else" option (nothing stops it being added later
-    the same way Room Booking has it, just wasn't asked for here).
+    (requested/confirmed/rejected/approver_notify), now including
+    `recipientsFor()`'s "book for someone else" handling too — added on
+    request; `BookCar.jsx` has the same toggle Room Booking's
+    `BookingForm.jsx` does. Naming differs slightly from Room Booking
+    on purpose: `car_bookings.requested_by`/`requested_by_email` always
+    stays whoever actually submitted the request (that column already
+    meant "requester", unlike Room Booking's `bookedBy`/`email`, which
+    mean "who it's for"), and two new nullable columns,
+    `booked_for`/`booked_for_email`, hold who the car is actually for
+    when they're not the same person — null for the (still far more
+    common) case of booking for yourself. `recipientsFor()` sends to
+    both (comma-separated) when they differ, same pattern as Room
+    Booking's own `recipientsFor()` in `App.jsx`; the email greeting and
+    the calendar-sync "Booked by:" line address the actual recipient
+    (`booked_for || requested_by`), not the submitter. `MyCarBookings.jsx`
+    matches on `requested_by_email` **or** `booked_for_email` so both
+    people see it in their own bookings list. Bulk booking
+    (`BulkBookCar.jsx`) deliberately doesn't get this — Room Booking's own
+    bulk form (`BulkBookingForm.jsx`) doesn't have it either, so this
+    keeps parity rather than adding it in one app and not the other.
   - `CarMonth.jsx` (`/car/month`) is a Mon-Sun month-grid overview —
     designed fresh, not adapted, since Room Booking has no monthly view of
     its own to copy (only `WeeklyView.jsx`/`DailyView.jsx`); the grid

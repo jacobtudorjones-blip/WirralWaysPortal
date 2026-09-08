@@ -95,13 +95,13 @@ function CarMonth() {
                     }}>{dayNum}</span>
                   </div>
                   {items.slice(0, 3).map(b => (
-                    <div key={b.id} title={b.purpose + " — " + b.requested_by} style={{
+                    <div key={b.id} title={b.purpose + " — " + (b.booked_for || b.requested_by)} style={{
                       fontSize: 10, fontWeight: 700, borderRadius: 5, padding: "2px 5px", lineHeight: 1.3,
                       background: b.status === "confirmed" ? "#dcfce7" : "#fff3cd",
                       color: b.status === "confirmed" ? "#16a34a" : "#7a5c00",
                       whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                     }}>
-                      {formatTime(b.start_time)} {b.requested_by.split(" ")[0]}
+                      {formatTime(b.start_time)} {(b.booked_for || b.requested_by).split(" ")[0]}
                     </div>
                   ))}
                   {items.length > 3 && <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 700 }}>+{items.length - 3} more</div>}

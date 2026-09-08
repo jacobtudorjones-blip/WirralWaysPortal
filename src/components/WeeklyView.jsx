@@ -4,7 +4,7 @@ import { todayStr, toDateStr, formatDateShort, formatTime } from "../lib/helpers
 import { slotToMins } from "../lib/slots.js";
 import BookingPopover from "./BookingPopover.jsx";
 
-function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, onReject }) {
+function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, onReject, onEdit, onCancel }) {
   // Default to current week Mon
   function getWeekStart(d) {
     const dt = new Date(d+"T00:00:00");
@@ -239,7 +239,7 @@ function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, o
                                     onMouseOver={e=>e.currentTarget.style.opacity="0.8"}
                                     onMouseOut={e=>e.currentTarget.style.opacity="1"}>
                                     <div style={{fontSize:10,fontWeight:800,color:isPendingBk?"#7a5c00":room.color,lineHeight:1.3,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",maxWidth:90}}>
-                                      {isPendingBk?"⏳ ":""}{bk.title}
+                                      {isPendingBk?"⏳ ":""}{bk.isRecurring?"🔁 ":""}{bk.title}
                                     </div>
                                     <div style={{fontSize:9,color:isPendingBk?"#7a5c00":room.color,fontWeight:600}}>
                                       {formatTime(bk.startTime)}–{formatTime(bk.endTime)}
@@ -259,14 +259,17 @@ function WeeklyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, o
           </table>
         </div>
       )}
-      <div style={{fontSize:11,color:"#555",marginTop:8,fontWeight:600}}>Tip: click any green cell to request that room. Click any booking to view details{currentUser?.isApprover?" or approve/reject":""} .</div>
+      <div style={{fontSize:11,color:"#555",marginTop:8,fontWeight:600}}>Tip: click any green cell to request that room. Click any booking to view full details and {currentUser?.isApprover?"approve, reject, edit or cancel it":"cancel your own"}.</div>
 
       {popover&&(
         <BookingPopover
           booking={popover.booking}
+          currentUser={currentUser}
           isApprover={currentUser?.isApprover}
           onApprove={(id)=>{onApprove(id);setPopover(null);}}
           onReject={(id,note)=>{onReject(id,note);setPopover(null);}}
+          onEdit={onEdit?(b)=>{onEdit(b);setPopover(null);}:null}
+          onCancel={onCancel?(id)=>{onCancel(id);setPopover(null);}:null}
           onClose={()=>setPopover(null)}
           style={{left:popover.x,top:popover.y}}
         />

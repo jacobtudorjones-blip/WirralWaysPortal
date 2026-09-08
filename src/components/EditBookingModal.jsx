@@ -7,6 +7,7 @@ function EditBookingModal({ booking, bookings, onSave, onClose, isRecurringGroup
   const room = ROOMS[booking.roomId];
   const [form, setForm] = useState({
     title:     booking.title,
+    date:      booking.date,
     startTime: booking.startTime,
     endTime:   booking.endTime,
     applyTo:   isRecurringGroup ? "one" : "one",
@@ -16,8 +17,20 @@ function EditBookingModal({ booking, bookings, onSave, onClose, isRecurringGroup
 
   function save() {
     if(!form.title.trim())        { setError("Please enter a title."); return; }
+    if(!form.date)                 { setError("Please pick a date."); return; }
     if(form.startTime>=form.endTime){ setError("End time must be after start time."); return; }
-    onSave(booking.id, form.applyTo, { title:form.title, startTime:form.startTime, endTime:form.endTime });
+    // Changing the date only makes sense for a single occurrence — moving
+    // a whole recurring series to a different date doesn't have an
+    // unambiguous meaning (which date should "future"/"all" shift to?),
+    // so the date field is disabled below unless applyTo is "one".
+    const conflict = bookings && bookings.some(b=>
+      b.id!==booking.id && b.roomId===booking.roomId && b.date===form.date &&
+      (b.status==="confirmed") && form.startTime<b.endTime && form.endTime>b.startTime
+    );
+    if(conflict){ setError("There's already a confirmed booking in "+room.name+" at that time on "+formatDateShort(form.date)+"."); return; }
+    const changes = { title:form.title, startTime:form.startTime, endTime:form.endTime };
+    if(form.applyTo==="one") changes.date = form.date;
+    onSave(booking.id, form.applyTo, changes);
   }
 
   return (
@@ -34,6 +47,12 @@ function EditBookingModal({ booking, bookings, onSave, onClose, isRecurringGroup
             <label style={lbl}>Booking title</label>
             <input value={form.title} onChange={e=>set("title",e.target.value)} style={inp}
               onFocus={e=>e.target.style.borderColor=room.color} onBlur={e=>e.target.style.borderColor=CGL.lavender}/>
+          </div>
+
+          <div style={{marginBottom:14}}>
+            <label style={lbl}>Date{isRecurringGroup&&form.applyTo!=="one"?" (this booking only — see below)":""}</label>
+            <input type="date" value={form.date} disabled={isRecurringGroup&&form.applyTo!=="one"}
+              onChange={e=>set("date",e.target.value)} style={{...inp,opacity:isRecurringGroup&&form.applyTo!=="one"?0.5:1}}/>
           </div>
 
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:isRecurringGroup?16:0}}>

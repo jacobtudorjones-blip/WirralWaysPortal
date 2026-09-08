@@ -5,6 +5,7 @@ import { addToWaitlist } from "../lib/waitlist.js";
 import { nameFromEmail } from "../lib/nameFromEmail.js";
 import { inp, lbl } from "../styles/shared.js";
 import DaySchedulePicker from "./DaySchedulePicker.jsx";
+import RecurrenceConflictModal from "./RecurrenceConflictModal.jsx";
 
 function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
   const defaultRoom = preRoom || ROOM_LIST[0].id;
@@ -17,6 +18,11 @@ function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
     notes: "",
   });
   const [error, setError] = useState("");
+  // Set only when a recurring series (2+ dates) has one or more occurrences
+  // clashing with an existing confirmed booking — see submit() below and
+  // RecurrenceConflictModal.jsx. A single-date booking still fails fast
+  // with the plain inline error instead, unchanged from before.
+  const [conflictInfo, setConflictInfo] = useState(null); // {dates, conflictDates}
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 
   async function handleWaitlistFromForm(bk) {
@@ -40,10 +46,21 @@ function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
       ? { nth: parseInt(form.nthWeekdayNth), weekday: parseInt(form.nthWeekdayDay) }
       : null;
     const dates = form.isRecurring&&form.recurrenceUntil ? getRecurrenceDates(form.date,form.recurrencePattern,form.recurrenceUntil,nthWd) : [form.date];
-    for(const d of dates){
-      if(hasConflict(bookings,form.roomId,d,form.startTime,form.endTime)){setError("There's already a confirmed booking in "+(ROOMS[form.roomId].name)+" at that time on "+(formatDateShort(d))+".");return;}
+    const conflictDates = dates.filter(d=>hasConflict(bookings,form.roomId,d,form.startTime,form.endTime));
+    if(conflictDates.length){
+      if(dates.length===1){
+        // Single, non-recurring booking — same immediate error as before,
+        // nothing to offer a resolution UI for.
+        setError("There's already a confirmed booking in "+(ROOMS[form.roomId].name)+" at that time on "+(formatDateShort(dates[0]))+".");
+        return;
+      }
+      // Recurring series with at least one clashing occurrence — let the
+      // user skip that date or move it to a different room, rather than
+      // blocking the whole series (see RecurrenceConflictModal.jsx).
+      setConflictInfo({ dates, conflictDates });
+      return;
     }
-    onBook(form,dates);
+    onBook(form, dates.map(date=>({date, roomId:form.roomId})));
   }
 
   const roomsBySite = SITES.reduce((acc,s)=>{
@@ -242,6 +259,19 @@ function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
           <button onClick={submit} style={{background:"linear-gradient(135deg,"+(CGL.blackcurrant)+","+(CGL.amethyst)+")",color:"white",border:"none",borderRadius:8,padding:"10px 24px",cursor:"pointer",fontWeight:800,fontSize:13,fontFamily:"inherit"}}>Submit request</button>
         </div>
       </div>
+
+      {conflictInfo&&(
+        <RecurrenceConflictModal
+          dates={conflictInfo.dates}
+          conflictDates={conflictInfo.conflictDates}
+          roomId={form.roomId}
+          startTime={form.startTime}
+          endTime={form.endTime}
+          bookings={bookings}
+          onConfirm={(items)=>{setConflictInfo(null);onBook(form,items);}}
+          onClose={()=>setConflictInfo(null)}
+        />
+      )}
     </div>
   );
 }

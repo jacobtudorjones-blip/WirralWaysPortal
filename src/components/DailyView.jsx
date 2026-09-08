@@ -5,7 +5,7 @@ import { slotToMins } from "../lib/slots.js";
 import { inp } from "../styles/shared.js";
 import BookingPopover from "./BookingPopover.jsx";
 
-function DailyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, onReject }) {
+function DailyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, onReject, onEdit, onCancel }) {
   const [date, setDate]       = useState(todayStr());
   const [site, setSite]       = useState("Price Street");
   const [typeFilter, setType] = useState("all");
@@ -182,7 +182,7 @@ function DailyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, on
                             onClick={e=>handleBookingClick(e,bk)}
                             style={{background:isPendingBk?"#fff3cd":room.color+"28",borderLeft:"2px solid "+(isPendingBk?"#d4a017":room.color),padding:"3px 6px",verticalAlign:"middle",cursor:"pointer"}}>
                             <div style={{fontSize:10,fontWeight:800,color:isPendingBk?"#7a5c00":room.color,lineHeight:1.3,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
-                              {isPendingBk?"⏳ ":""}{bk.title}
+                              {isPendingBk?"⏳ ":""}{bk.isRecurring?"🔁 ":""}{bk.title}
                             </div>
                             <div style={{fontSize:9,color:isPendingBk?"#7a5c00":room.color,fontWeight:600,whiteSpace:"nowrap"}}>
                               {bk.bookedBy.split(" ")[0]} &bull; {formatTime(bk.startTime)}–{formatTime(bk.endTime)}{isPendingBk?" · Pending":""}
@@ -210,14 +210,17 @@ function DailyView({ bookings, onRequest, currentUser, onWaitlist, onApprove, on
           </table>
         </div>
       )}
-      <div style={{fontSize:11,color:"#555",marginTop:8,fontWeight:600}}>Tip: click any green slot to request that room. Click any booking to view details{currentUser?.isApprover?" or approve/reject":""} .</div>
+      <div style={{fontSize:11,color:"#555",marginTop:8,fontWeight:600}}>Tip: click any green slot to request that room. Click any booking to view full details and {currentUser?.isApprover?"approve, reject, edit or cancel it":"cancel your own"}.</div>
 
       {popover&&(
         <BookingPopover
           booking={popover.booking}
+          currentUser={currentUser}
           isApprover={currentUser?.isApprover}
           onApprove={(id)=>{onApprove(id);setPopover(null);}}
           onReject={(id,note)=>{onReject(id,note);setPopover(null);}}
+          onEdit={onEdit?(b)=>{onEdit(b);setPopover(null);}:null}
+          onCancel={onCancel?(id)=>{onCancel(id);setPopover(null);}:null}
           onClose={()=>setPopover(null)}
           style={{left:popover.x,top:popover.y}}
         />

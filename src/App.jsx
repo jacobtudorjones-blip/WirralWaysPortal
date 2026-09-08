@@ -48,6 +48,8 @@ function App() {
   const [showBulkForm,setShowBulkForm] = useState(false);
   const [loginNotifs,setLoginNotifs] = useState(null);   // shown after data loads post-login
   const [pendingIdentity,setPendingIdentity] = useState(null); // identity waiting for bookings to load
+  const [allBookingsSearch,setAllBookingsSearch] = useState(""); // "All bookings" tab text search (title/room/person)
+  const [myBookingsSearch,setMyBookingsSearch]   = useState(""); // "My bookings" tab text search
 
   // ── PER-ROOM URLS: mounted at /rooms/*, so /rooms/meadow-room should
   // deep-link straight to that room (floorplans tab + activeRoom set), and
@@ -310,6 +312,13 @@ function App() {
   // button lands on My Bookings, where cancelling still needs an explicit
   // click on the booking itself, same as using the app normally.
   const CANCEL_BUTTON = { label: "Cancel this booking", url: MY_BOOKINGS_URL, color: CGL.raspberry };
+  // Explains the booking.ics attachment (see icsAttachment() above) on
+  // every email that carries one — confirmed and reminder. Requested on
+  // request: people weren't realising the attachment was actually
+  // clickable/importable, not just a file to ignore. Deliberately generic
+  // across mail clients rather than naming one specific app, since staff
+  // use a mix of Outlook desktop, Outlook web and phone mail apps.
+  const ICS_HELP_TEXT = "📅 Attached is a calendar invite for this booking (booking.ics) — open the attachment and choose \"Add to calendar\" / \"Open\" (in Outlook, double-clicking it does this automatically) to save it to your own calendar.";
 
   // The if-chain below builds the plain-text side (to/subject/body/buttons)
   // per email type; buildEmail() wraps it to also render an HTML version
@@ -328,7 +337,7 @@ function App() {
     if(type==="confirmed") return {
       to: recipientsFor(booking), type,
       subject: "Booking confirmed — " + room.name + ", " + formatDateShort(booking.date) + "",
-      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nGreat news — your room booking has been confirmed.\n\n" + detail + "\n\nPlease remember to check in when you arrive. No longer need it? You can cancel from " + MY_BOOKINGS_URL + ".\n\nWirral Ways Room Booking",
+      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nGreat news — your room booking has been confirmed.\n\n" + detail + "\n\n" + ICS_HELP_TEXT + "\n\nPlease remember to check in when you arrive. No longer need it? You can cancel from " + MY_BOOKINGS_URL + ".\n\nWirral Ways Room Booking",
       buttons: [CANCEL_BUTTON],
     };
     if(type==="rejected") return {
@@ -349,7 +358,7 @@ function App() {
     if(type==="reminder") return {
       to: recipientsFor(booking), type: "confirmed",
       subject: "Reminder: " + room.name + " tomorrow — " + formatDateShort(booking.date) + "",
-      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nJust a reminder that you have a room booking tomorrow.\n\n" + detail + (booking.notes ? "\n\nRequirements noted: " + booking.notes : "") + "\n\nPlease remember to check in when you arrive. No longer need it? You can cancel from " + MY_BOOKINGS_URL + ".\n\nWirral Ways Room Booking",
+      body: "Hi " + booking.bookedBy.split(" ")[0] + ",\n\nJust a reminder that you have a room booking tomorrow.\n\n" + detail + (booking.notes ? "\n\nRequirements noted: " + booking.notes : "") + "\n\n" + ICS_HELP_TEXT + "\n\nPlease remember to check in when you arrive. No longer need it? You can cancel from " + MY_BOOKINGS_URL + ".\n\nWirral Ways Room Booking",
       buttons: [CANCEL_BUTTON],
     };
   }
@@ -360,10 +369,11 @@ function App() {
     return result;
   }
 
-  function handleBook(form,dates){
-    const nthWd = form.recurrencePattern === "nth_weekday"
-      ? { nth: parseInt(form.nthWeekdayNth), weekday: parseInt(form.nthWeekdayDay) }
-      : null;
+  // items: [{date, roomId}, ...] — usually every item shares form.roomId,
+  // but a recurring series can carry a different roomId per date when the
+  // user resolved a conflicting occurrence onto an alternative room in
+  // RecurrenceConflictModal (see BookingForm.jsx) rather than skipping it.
+  function handleBook(form,items){
     const bookedForEmail = form.bookingForOther && form.bookingForEmail.trim()
       ? form.bookingForEmail.trim().toLowerCase()
       : user.email;
@@ -371,21 +381,21 @@ function App() {
       ? nameFromEmail(form.bookingForEmail.trim())
       : user.name;
     const autoApprove = user.isApprover;
-    const recurringGroupId = dates.length > 1 ? genId() : null;
-    const newBookings=dates.map(d=>({
-      id:genId(),roomId:form.roomId,title:form.title,
+    const recurringGroupId = items.length > 1 ? genId() : null;
+    const newBookings=items.map(({date,roomId})=>({
+      id:genId(),roomId,title:form.title,
       bookedBy:bookedForName,
       email:bookedForEmail,
       requestedBy:user.name,
       requestedByEmail:user.email,
       bookedForOther: form.bookingForOther && form.bookingForEmail.trim() !== "",
-      date:d,startTime:form.startTime,endTime:form.endTime,
+      date,startTime:form.startTime,endTime:form.endTime,
       notes: form.notes || "",
       status: autoApprove ? "confirmed" : "pending",
       approvedBy: autoApprove ? user.name : null,
       approvedAt: autoApprove ? nowStr() : null,
       checkedIn:false,
-      isRecurring:dates.length>1,
+      isRecurring:items.length>1,
       recurringGroupId,
       recurrencePattern:form.recurrencePattern,
       recurrenceUntil:"",
@@ -397,8 +407,8 @@ function App() {
     addAudit(
       autoApprove ? "booking_approved" : "booking_requested",
       autoApprove
-        ? user.name + " booked " + room.name + " (" + room.site + ") — " + formatDateShort(dates[0]) + (dates.length>1?" + "+(dates.length-1)+" more":"") + " (auto-approved)"
-        : user.name + " requested " + room.name + " (" + room.site + ") — " + formatDateShort(dates[0]) + (dates.length>1?" + "+(dates.length-1)+" more":"") + "",
+        ? user.name + " booked " + room.name + " (" + room.site + ") — " + formatDateShort(items[0].date) + (items.length>1?" + "+(items.length-1)+" more":"") + " (auto-approved)"
+        : user.name + " requested " + room.name + " (" + room.site + ") — " + formatDateShort(items[0].date) + (items.length>1?" + "+(items.length-1)+" more":"") + "",
       user.name
     );
     setShowForm(false);
@@ -599,6 +609,22 @@ function App() {
     (b.bookedForOther && norm(b.requestedByEmail)===norm(user.email))
   ).sort((a,b)=>b.createdAt?.localeCompare(a.createdAt||"")||0) : [];
   const confirmedToday = bookings.filter(b=>b.date===todayStr()&&b.status==="confirmed");
+  // Shared text-search predicate for the My bookings / All bookings search
+  // boxes below — matches on title, room name, and whoever's involved
+  // (booked-by or, for a "book for someone else" request, the requester
+  // too), so e.g. searching a person's name finds bookings they made even
+  // when they made it for someone else.
+  function bookingMatchesSearch(b, q) {
+    if(!q.trim()) return true;
+    const needle = norm(q);
+    const room = ROOMS[b.roomId];
+    return norm(b.title).includes(needle)
+      || norm(b.bookedBy).includes(needle)
+      || norm(b.email).includes(needle)
+      || (b.requestedBy && norm(b.requestedBy).includes(needle))
+      || (b.requestedByEmail && norm(b.requestedByEmail).includes(needle))
+      || norm(room.name).includes(needle);
+  }
   const filteredRooms  = ROOM_LIST.filter(r=>{
     if(filters.site!=="all"&&r.site!==filters.site) return false;
     if(filters.type!=="all"&&!r.types.includes(filters.type)) return false;
@@ -709,7 +735,18 @@ function App() {
                 <button onClick={()=>setShowForm(true)} style={{background:"linear-gradient(135deg,"+(CGL.blackcurrant)+","+(CGL.amethyst)+")",color:"white",border:"none",borderRadius:10,padding:"12px 24px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>Request your first room</button>
               </div>
             )}
-            {myBookings.map(b=>(
+            {myBookings.length>0&&(
+              <input
+                value={myBookingsSearch}
+                onChange={e=>setMyBookingsSearch(e.target.value)}
+                placeholder="🔍 Search your bookings by title or room…"
+                style={{...inp,marginBottom:14,maxWidth:360}}
+              />
+            )}
+            {myBookings.length>0&&myBookings.filter(b=>bookingMatchesSearch(b,myBookingsSearch)).length===0&&(
+              <div style={{textAlign:"center",padding:24,color:"#aaa",fontSize:13,fontWeight:600}}>No bookings match "{myBookingsSearch}".</div>
+            )}
+            {myBookings.filter(b=>bookingMatchesSearch(b,myBookingsSearch)).map(b=>(
               <BookingCard key={b.id} booking={b} onCancel={handleCancel} onCheckIn={handleCheckIn} isApprover={user.isApprover} onApprove={handleApprove} onReject={handleReject} onEdit={user.isApprover?(b)=>setEditModal({booking:b}):null} currentUser={user}/>
             ))}
           </div>
@@ -722,12 +759,12 @@ function App() {
 
         {/* ── WEEKLY VIEW ── */}
         {tab==="weeklyview"&&(
-          <WeeklyView bookings={bookings} onRequest={(roomId)=>{setPreRoom(roomId);setShowForm(true);}} currentUser={user} onWaitlist={handleWaitlistJoin} onApprove={handleApprove} onReject={handleReject}/>
+          <WeeklyView bookings={bookings} onRequest={(roomId)=>{setPreRoom(roomId);setShowForm(true);}} currentUser={user} onWaitlist={handleWaitlistJoin} onApprove={handleApprove} onReject={handleReject} onEdit={(b)=>setEditModal({booking:b})} onCancel={handleCancel}/>
         )}
 
         {/* ── DAILY VIEW ── */}
         {tab==="dailyview"&&(
-          <DailyView bookings={bookings} onRequest={(roomId)=>{setPreRoom(roomId);setShowForm(true);}} currentUser={user} onWaitlist={handleWaitlistJoin} onApprove={handleApprove} onReject={handleReject}/>
+          <DailyView bookings={bookings} onRequest={(roomId)=>{setPreRoom(roomId);setShowForm(true);}} currentUser={user} onWaitlist={handleWaitlistJoin} onApprove={handleApprove} onReject={handleReject} onEdit={(b)=>setEditModal({booking:b})} onCancel={handleCancel}/>
         )}
 
         {/* ── FLOOR PLANS ── */}
@@ -859,10 +896,16 @@ function App() {
               <div style={{fontSize:14,color:"#666"}}>{bookings.filter(b=>b.status==="confirmed").length} confirmed &bull; {pending.length} pending &bull; {bookings.length} total</div>
             </div>
             <FilterBar filters={filters} onChange={setFilters}/>
+            <input
+              value={allBookingsSearch}
+              onChange={e=>setAllBookingsSearch(e.target.value)}
+              placeholder="🔍 Search by title, room, or person…"
+              style={{...inp,marginBottom:16,maxWidth:360}}
+            />
             {(()=>{
               const visIds=new Set(filteredRooms.map(r=>r.id));
-              const sorted=[...bookings].filter(b=>visIds.has(b.roomId)).sort((a,b)=>a.date.localeCompare(b.date)||a.startTime.localeCompare(b.startTime));
-              if(!sorted.length) return <div style={{textAlign:"center",padding:40,color:"#bbb"}}>No bookings match your filters.</div>;
+              const sorted=[...bookings].filter(b=>visIds.has(b.roomId)&&bookingMatchesSearch(b,allBookingsSearch)).sort((a,b)=>a.date.localeCompare(b.date)||a.startTime.localeCompare(b.startTime));
+              if(!sorted.length) return <div style={{textAlign:"center",padding:40,color:"#bbb"}}>No bookings match your filters{allBookingsSearch.trim()?" and search":""}.</div>;
               const byDate={};
               sorted.forEach(b=>{if(!byDate[b.date])byDate[b.date]=[];byDate[b.date].push(b);});
               return Object.entries(byDate).map(([date,bks])=>(

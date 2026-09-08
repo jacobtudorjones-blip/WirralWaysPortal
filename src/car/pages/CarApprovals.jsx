@@ -48,7 +48,8 @@ function CarApprovals({ user }) {
             <div key={b.id} style={{ background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: 12, padding: "14px 16px" }}>
               <div style={{ fontWeight: 800, fontSize: 14, color: CGL.blackcurrant, marginBottom: 4 }}>{b.purpose}</div>
               <div style={{ fontSize: 12, color: "#555", marginBottom: 4 }}>{formatDateShort(b.date)} · {formatTime(b.start_time)}–{formatTime(b.end_time)}</div>
-              <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>Requested by {b.requested_by} ({b.requested_by_email}){b.notes ? " · " + b.notes : ""}</div>
+              <div style={{ fontSize: 12, color: "#888", marginBottom: b.booked_for_email ? 2 : 10 }}>Requested by {b.requested_by} ({b.requested_by_email}){b.notes ? " · " + b.notes : ""}</div>
+              {b.booked_for_email && <div style={{ fontSize: 12, color: CGL.saffron, marginBottom: 10 }}>Booked for: {b.booked_for} ({b.booked_for_email})</div>}
               <div style={{ display: "flex", gap: 8 }}>
                 <button disabled={busy} onClick={() => approve(b)} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Approve</button>
                 <button disabled={busy} onClick={() => setRejecting(b)} style={{ background: "none", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#b91c1c", cursor: "pointer" }}>Reject</button>

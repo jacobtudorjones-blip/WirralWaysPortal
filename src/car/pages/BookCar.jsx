@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CGL, VEHICLE } from "../../data/car.js";
 import { todayStr, nowStr } from "../../lib/helpers.js";
+import { nameFromEmail } from "../../lib/nameFromEmail.js";
 import { inp, lbl } from "../../styles/shared.js";
 import { useCarBookings } from "../lib/useCarBookings.js";
 import { sendCarRequestEmails, sendCarDecisionEmail, syncCarCalendar } from "../lib/carEmail.js";
@@ -34,6 +35,11 @@ function BookCar({ user }) {
   const [endTime, setEndTime] = useState(null);
   const [purpose, setPurpose] = useState("");
   const [notes, setNotes] = useState("");
+  // "Book this for someone else" — mirrors Room Booking's BookingForm.jsx
+  // toggle. bookingForEmail must be a real CGL address (same rule Room
+  // Booking uses) since it's who the confirmation/decision emails go to.
+  const [bookingForOther, setBookingForOther] = useState(false);
+  const [bookingForEmail, setBookingForEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [done, setDone] = useState(null);
@@ -46,6 +52,10 @@ function BookCar({ user }) {
     e.preventDefault();
     if (!startTime || !endTime) { setError("Please select a time slot on the schedule below."); return; }
     if (!purpose.trim()) { setError("Please say what the car's needed for."); return; }
+    if (bookingForOther) {
+      if (!bookingForEmail.trim()) { setError("Please enter the email address of the person you are booking for."); return; }
+      if (!bookingForEmail.trim().toLowerCase().endsWith("@cgl.org.uk")) { setError("The email address for the other person must end in @cgl.org.uk."); return; }
+    }
     if (hasConflict(bookings || [], date, startTime, endTime)) {
       setError("That slot's just been taken — please pick a different time.");
       return;
@@ -57,6 +67,8 @@ function BookCar({ user }) {
       const payload = {
         requested_by: user.name,
         requested_by_email: user.email,
+        booked_for: bookingForOther && bookingForEmail.trim() ? nameFromEmail(bookingForEmail.trim()) : null,
+        booked_for_email: bookingForOther && bookingForEmail.trim() ? bookingForEmail.trim().toLowerCase() : null,
         date, start_time: startTime, end_time: endTime,
         purpose: purpose.trim(), notes: notes.trim() || null,
         status: autoApprove ? "confirmed" : "pending",
@@ -114,10 +126,10 @@ function BookCar({ user }) {
         <h2 style={{ color: "#16a34a", margin: 0 }}>{done.status === "confirmed" ? "Booking confirmed" : "Request sent"}</h2>
         <p style={{ color: "#6b7280", fontSize: 13, maxWidth: 320 }}>
           {done.status === "confirmed"
-            ? VEHICLE.name + " is booked for you " + done.date + ", " + done.start_time + "–" + done.end_time + "."
+            ? VEHICLE.name + " is booked for " + (done.booked_for || "you") + " " + done.date + ", " + done.start_time + "–" + done.end_time + "."
             : "You'll get an email once it's approved or if there's a problem."}
         </p>
-        <button onClick={() => { setDone(null); setStartTime(null); setEndTime(null); setPurpose(""); setNotes(""); }} style={{ background: CGL.blackcurrant, color: "#fff", border: "none", borderRadius: 10, padding: "10px 22px", fontWeight: 700, cursor: "pointer" }}>Book again</button>
+        <button onClick={() => { setDone(null); setStartTime(null); setEndTime(null); setPurpose(""); setNotes(""); setBookingForOther(false); setBookingForEmail(""); }} style={{ background: CGL.blackcurrant, color: "#fff", border: "none", borderRadius: 10, padding: "10px 22px", fontWeight: 700, cursor: "pointer" }}>Book again</button>
       </div>
     );
   }
@@ -141,6 +153,36 @@ function BookCar({ user }) {
         <div style={{ marginBottom: 16 }}>
           <label style={lbl}>Date</label>
           <input type="date" style={inp} value={date} min={todayStr()} onChange={e => { setDate(e.target.value); setStartTime(null); setEndTime(null); }} />
+        </div>
+
+        {/* Booking for someone else toggle — mirrors Room Booking's BookingForm.jsx */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 14px", background: bookingForOther ? CGL.saffron + "15" : CGL.lavender + "22", borderRadius: 8, border: "1px solid " + (bookingForOther ? CGL.saffron + "66" : CGL.lavender) }}>
+            <input type="checkbox" checked={bookingForOther} onChange={e => setBookingForOther(e.target.checked)} style={{ width: 17, height: 17, accentColor: CGL.saffron }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: bookingForOther ? CGL.saffron : "#555" }}>I'm booking this for someone else</div>
+              <div style={{ fontSize: 11, color: "#888" }}>The booking will appear on their profile too, and they'll get the confirmation email</div>
+            </div>
+          </label>
+          {bookingForOther && (
+            <div style={{ marginTop: 8, padding: "12px 14px", background: "white", borderRadius: 8, border: "1.5px solid " + CGL.saffron + "55" }}>
+              <label style={{ ...lbl, color: CGL.saffron }}>Their CGL email address *</label>
+              <input
+                type="email"
+                value={bookingForEmail}
+                onChange={e => setBookingForEmail(e.target.value.toLowerCase())}
+                placeholder="firstname.lastname@cgl.org.uk"
+                style={inp}
+                onFocus={e => e.target.style.borderColor = CGL.saffron}
+                onBlur={e => e.target.style.borderColor = CGL.lavender}
+              />
+              {bookingForEmail.includes("@") && (
+                <div style={{ fontSize: 11, color: CGL.saffron, marginTop: 5, fontWeight: 600 }}>
+                  Will show on: {nameFromEmail(bookingForEmail)}'s bookings
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <CarSchedulePicker date={date} dayBookings={dayBookings} startTime={startTime} endTime={endTime} onChange={(s, e) => { setStartTime(s); setEndTime(e); }} />

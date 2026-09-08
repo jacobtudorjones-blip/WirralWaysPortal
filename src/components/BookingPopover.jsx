@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { CGL, ROOMS } from "../data/rooms.js";
-import { formatDateShort, formatTime } from "../lib/helpers.js";
+import { formatDateShort, formatTime, norm, todayStr } from "../lib/helpers.js";
 import { inp } from "../styles/shared.js";
 
-// Quick-action popover shown when clicking a booking block in daily/weekly view
-function BookingPopover({ booking, isApprover, onApprove, onReject, onClose, style }) {
+// Quick-action popover shown when clicking a booking block in daily/weekly
+// view — approve/reject for approvers on a pending booking (as before),
+// plus edit/cancel for a confirmed one (onEdit/onCancel are optional so
+// callers that don't wire them up just don't get those buttons).
+function BookingPopover({ booking, currentUser, isApprover, onApprove, onReject, onEdit, onCancel, onClose, style }) {
   const room = ROOMS[booking.roomId];
   const [rejectNote, setRejectNote] = useState("");
   const [showReject, setShowReject] = useState(false);
+  const isPast = booking.date < todayStr();
+  const isOwn = norm(booking.email) === norm(currentUser?.email);
   return (
     <div style={{position:"fixed",inset:0,zIndex:1050}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()}
@@ -22,10 +27,12 @@ function BookingPopover({ booking, isApprover, onApprove, onReject, onClose, sty
           <span style={{fontSize:10,color:booking.status==="pending"?"#7a5c00":"#1a7a4a",fontWeight:700,background:booking.status==="pending"?"#fff3cd":"#e8f5ee",padding:"2px 7px",borderRadius:10}}>
             {booking.status==="pending"?"⏳ Awaiting approval":"✓ Confirmed"}
           </span>
+          {booking.isRecurring&&<span style={{fontSize:10,color:"#666",border:"1px solid "+(CGL.lavender),padding:"2px 7px",borderRadius:10}}>🔁 Recurring</span>}
         </div>
         <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e",marginBottom:3}}>{booking.title}</div>
         <div style={{fontSize:12,color:"#444",marginBottom:2}}>{formatDateShort(booking.date)} &bull; {formatTime(booking.startTime)}–{formatTime(booking.endTime)}</div>
-        <div style={{fontSize:12,color:"#666",marginBottom:booking.notes?6:0}}>{booking.bookedBy}</div>
+        <div style={{fontSize:12,color:"#666",marginBottom:2}}>{booking.bookedBy}{booking.bookedForOther&&booking.requestedBy&&<span style={{color:CGL.saffron}}> — requested by {booking.requestedBy}</span>}</div>
+        {booking.checkedIn&&<div style={{fontSize:11,color:"#1a7a4a",fontWeight:700,marginBottom:booking.notes?6:2}}>✓ Checked in</div>}
         {booking.notes&&<div style={{fontSize:11,color:"#555",background:"#f8f5fc",borderRadius:6,padding:"5px 8px",marginBottom:6,fontStyle:"italic"}}>📝 {booking.notes}</div>}
         {/* Actions */}
         {isApprover&&booking.status==="pending"&&(
@@ -57,6 +64,22 @@ function BookingPopover({ booking, isApprover, onApprove, onReject, onClose, sty
                   </button>
                 </div>
               </>
+            )}
+          </div>
+        )}
+        {!isPast&&(booking.status==="confirmed"||booking.status==="pending")&&(isApprover||isOwn)&&!showReject&&(
+          <div style={{marginTop:10,display:"flex",gap:6}}>
+            {onEdit&&booking.status==="confirmed"&&isApprover&&(
+              <button onClick={()=>onEdit(booking)}
+                style={{flex:1,background:"linear-gradient(135deg,"+(CGL.ocean)+","+(CGL.space)+")",color:"white",border:"none",borderRadius:7,padding:"8px 0",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"inherit"}}>
+                ✏️ Edit
+              </button>
+            )}
+            {onCancel&&(
+              <button onClick={()=>onCancel(booking.id)}
+                style={{flex:1,background:"transparent",color:"#888",border:"1px solid #ddd",borderRadius:7,padding:"8px 0",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"inherit"}}>
+                Cancel
+              </button>
             )}
           </div>
         )}
