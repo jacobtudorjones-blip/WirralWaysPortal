@@ -45,8 +45,12 @@ const APPROVERS = [
 // the same as APPROVERS above. APPROVERS is the access-control list (who
 // can log in and approve/reject); this is just where the "someone needs
 // your approval" *email* lands, which the team wants narrower than the
-// full approver list.
-const REQUEST_NOTIFY_EMAILS = ["wirral.services@cgl.org.uk", "jacob.jones2@cgl.org.uk"];
+// full approver list. jacob.jones2@cgl.org.uk was removed from here on
+// request — he's still a Room Booking approver (see APPROVERS above),
+// just doesn't want the "new request" notification email itself. Adding
+// a new approver here is a separate decision from adding them to
+// APPROVERS — don't add someone here without being asked to.
+const REQUEST_NOTIFY_EMAILS = ["wirral.services@cgl.org.uk"];
 
 // The identity used as the booker/email on bookings that don't belong to
 // any one named person — recurring clinics, groups and services imported
