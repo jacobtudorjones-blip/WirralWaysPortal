@@ -38,6 +38,7 @@ const APPROVERS = [
   { email: "toni.kaklamanis@cgl.org.uk" },
   { email: "yvonne.mcgrath@cgl.org.uk" },
   { email: "jack.lawson@cgl.org.uk" },
+  { email: "april.collings@cgl.org.uk" },
 ];
 
 // Who the "new room request" notification email goes to — deliberately not
