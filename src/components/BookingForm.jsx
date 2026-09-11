@@ -30,6 +30,7 @@ function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
     roomId:defaultRoom, title:"",
     date:todayStr(), startTime:"", endTime:"",
     isRecurring:false, recurrencePattern:"weekly", recurrenceUntil:"",
+    recurrenceWeeksN: 3,
     nthWeekdayNth: 1, nthWeekdayDay: 1,
     bookingForOther: false, bookingForEmail: "",
     notes: "",
@@ -62,7 +63,7 @@ function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
     const nthWd = form.recurrencePattern === "nth_weekday"
       ? { nth: parseInt(form.nthWeekdayNth), weekday: parseInt(form.nthWeekdayDay) }
       : null;
-    const dates = form.isRecurring&&form.recurrenceUntil ? getRecurrenceDates(form.date,form.recurrencePattern,form.recurrenceUntil,nthWd) : [form.date];
+    const dates = form.isRecurring&&form.recurrenceUntil ? getRecurrenceDates(form.date,form.recurrencePattern,form.recurrenceUntil,nthWd,form.recurrenceWeeksN) : [form.date];
     const conflictDates = dates.filter(d=>hasConflict(bookings,form.roomId,d,form.startTime,form.endTime));
     if(conflictDates.length){
       if(dates.length===1){
@@ -227,10 +228,23 @@ function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
                 <select value={form.recurrencePattern} onChange={e=>set("recurrencePattern",e.target.value)} style={inp}>
                   <option value="weekly">Every week</option>
                   <option value="fortnightly">Every two weeks</option>
+                  <option value="every_n_weeks">Every… (custom number of weeks)</option>
                   <option value="monthly">Same date each month</option>
                   <option value="nth_weekday">Specific day of the month</option>
                 </select>
               </div>
+
+              {form.recurrencePattern==="every_n_weeks"&&(
+                <div style={{marginBottom:12}}>
+                  <label style={lbl}>Repeat every…</label>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <input type="number" min={1} max={52} value={form.recurrenceWeeksN}
+                      onChange={e=>set("recurrenceWeeksN",e.target.value)}
+                      style={{...inp,width:80}}/>
+                    <span style={{fontSize:13,color:"#555",fontWeight:600}}>week{Number(form.recurrenceWeeksN)!==1?"s":""}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Outlook-style nth weekday picker */}
               {form.recurrencePattern==="nth_weekday"&&(
@@ -285,7 +299,7 @@ function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
 
               {/* Session count preview for non-nth patterns */}
               {form.recurrencePattern!=="nth_weekday"&&form.recurrenceUntil&&(()=>{
-                const count=getRecurrenceDates(form.date,form.recurrencePattern,form.recurrenceUntil).length;
+                const count=getRecurrenceDates(form.date,form.recurrencePattern,form.recurrenceUntil,null,form.recurrenceWeeksN).length;
                 return count>1?(
                   <div style={{marginTop:8,fontSize:12,color:CGL.blackcurrant,background:CGL.blackcurrant+"10",borderRadius:7,padding:"7px 12px"}}>
                     This will create <strong>{count} bookings</strong>

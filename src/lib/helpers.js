@@ -65,8 +65,13 @@ function getNthWeekdayOfMonth(year, month, weekday, nth) {
   return day;
 }
 
-function getRecurrenceDates(start, pattern, until, nthWeekday = null) {
+function getRecurrenceDates(start, pattern, until, nthWeekday = null, weeksInterval = null) {
   // nthWeekday: { nth: 1|2|3|4|-1, weekday: 0-6 }  (-1 = last)
+  // weeksInterval: only used when pattern === "every_n_weeks" — a custom
+  // "every N weeks" cadence (e.g. every 3 weeks), alongside the fixed
+  // weekly/fortnightly presets rather than replacing them, so existing
+  // bookings' stored recurrencePattern values keep meaning what they
+  // always did.
   const dates = [], end = new Date(until + "T00:00:00");
   let cur = new Date(start + "T00:00:00");
 
@@ -92,6 +97,7 @@ function getRecurrenceDates(start, pattern, until, nthWeekday = null) {
     dates.push(toDateStr(cur));
     if (pattern === "weekly")       cur.setDate(cur.getDate() + 7);
     else if (pattern === "fortnightly") cur.setDate(cur.getDate() + 14);
+    else if (pattern === "every_n_weeks") cur.setDate(cur.getDate() + 7 * (parseInt(weeksInterval) || 1));
     else if (pattern === "monthly") cur.setMonth(cur.getMonth() + 1);
     else break;
   }
