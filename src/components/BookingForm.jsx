@@ -7,8 +7,25 @@ import { inp, lbl } from "../styles/shared.js";
 import DaySchedulePicker from "./DaySchedulePicker.jsx";
 import RecurrenceConflictModal from "./RecurrenceConflictModal.jsx";
 
+// Clinical spaces can only be booked by an approver — everyone else can
+// still see them (floor plans, weekly/daily view all show clinical rooms
+// and their booked/free status same as any other room) but can't submit
+// a request for one; they're pointed at admin instead. Enforced here,
+// the single place every "Request"/free-slot-click entry point (Home tab,
+// WeeklyView, DailyView, Floor Plans) funnels through, rather than at
+// each call site individually.
+function isClinicalRoom(room) { return room.types.includes("Clinical Room"); }
+
 function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
-  const defaultRoom = preRoom || ROOM_LIST[0].id;
+  const nonClinicalRooms = ROOM_LIST.filter(r=>!isClinicalRoom(r));
+  const preRoomObj = preRoom ? ROOMS[preRoom] : null;
+  // Set only when the room this form was opened for (via preRoom) is
+  // clinical and the current user isn't an approver — see the blocked
+  // render branch below, which short-circuits before the real form.
+  const blockedRoom = (!currentUser.isApprover && preRoomObj && isClinicalRoom(preRoomObj)) ? preRoomObj : null;
+  const defaultRoom = (preRoom && !blockedRoom) ? preRoom
+    : currentUser.isApprover ? ROOM_LIST[0].id
+    : (nonClinicalRooms[0]?.id || ROOM_LIST[0].id);
   const [form, setForm] = useState({
     roomId:defaultRoom, title:"",
     date:todayStr(), startTime:"", endTime:"",
@@ -64,12 +81,36 @@ function BookingForm({ preRoom, bookings, onBook, onClose, currentUser }) {
   }
 
   const roomsBySite = SITES.reduce((acc,s)=>{
-    const rooms=ROOM_LIST.filter(r=>r.site===s);
+    const rooms=(currentUser.isApprover ? ROOM_LIST : nonClinicalRooms).filter(r=>r.site===s);
     if(rooms.length) acc[s]=rooms;
     return acc;
   },{});
 
   const selectedRoom = ROOMS[form.roomId];
+
+  if(blockedRoom){
+    return (
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999,padding:16,fontFamily:"'Nunito',system-ui,sans-serif"}}>
+        <div style={{background:"white",borderRadius:16,width:"100%",maxWidth:420,boxShadow:"0 24px 80px rgba(0,0,0,0.25)",overflow:"hidden"}}>
+          <div style={{background:blockedRoom.color,padding:"20px 24px"}}>
+            <div style={{fontSize:10,fontWeight:800,color:"rgba(255,255,255,0.6)",letterSpacing:1.5,marginBottom:3}}>CLINICAL ROOM</div>
+            <div style={{color:"white",fontSize:18,fontWeight:800}}>{blockedRoom.icon} {blockedRoom.name}</div>
+          </div>
+          <div style={{padding:24}}>
+            <div style={{fontSize:14,color:"#333",lineHeight:1.7,marginBottom:10}}>
+              {blockedRoom.name} is a clinical space, so only an approver can book it.
+            </div>
+            <div style={{fontSize:14,color:"#333",lineHeight:1.7}}>
+              To book this room, please speak to admin.
+            </div>
+          </div>
+          <div style={{padding:"14px 24px",borderTop:"1px solid "+(CGL.lavender),display:"flex",justifyContent:"flex-end"}}>
+            <button onClick={onClose} style={{background:blockedRoom.color,color:"white",border:"none",borderRadius:8,padding:"10px 24px",cursor:"pointer",fontWeight:800,fontSize:13,fontFamily:"inherit"}}>Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999,padding:16,fontFamily:"'Nunito',system-ui,sans-serif"}}>

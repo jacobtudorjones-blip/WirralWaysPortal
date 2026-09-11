@@ -8,7 +8,15 @@ import { inp, lbl } from "../styles/shared.js";
 //   "rooms"  — multiple rooms on the same day
 //   "range"  — same room, every day in a date range
 
+// Clinical spaces can only be booked by an approver (see BookingForm.jsx's
+// single-booking version of this same rule) — a non-approver's room
+// dropdowns here simply don't offer them, same "speak to admin" policy,
+// applied everywhere a room can be picked in this form.
+function isClinicalRoom(room) { return room.types.includes("Clinical Room"); }
+
 function BulkBookingForm({ bookings, onBook, onClose, currentUser }) {
+  const nonClinicalRooms = ROOM_LIST.filter(r=>!isClinicalRoom(r));
+  const defaultRoomId = currentUser.isApprover ? ROOM_LIST[0].id : (nonClinicalRooms[0]?.id || ROOM_LIST[0].id);
   const [mode, setMode]         = useState("dates");
   const [title, setTitle]       = useState("");
   const [startTime, setStart]   = useState("09:00");
@@ -17,7 +25,7 @@ function BulkBookingForm({ bookings, onBook, onClose, currentUser }) {
   const [error, setError]       = useState("");
 
   // Mode: dates — pick room once, add multiple dates
-  const [roomId, setRoomId]     = useState(ROOM_LIST[0].id);
+  const [roomId, setRoomId]     = useState(defaultRoomId);
   const [pickedDates, setPicked]= useState([]);
   const [dateInput, setDateIn]  = useState(todayStr());
 
@@ -26,7 +34,7 @@ function BulkBookingForm({ bookings, onBook, onClose, currentUser }) {
   const [pickedRooms, setRooms] = useState([]);
 
   // Mode: range — pick room, start date, end date, weekdays
-  const [rangeRoom, setRangeRoom]   = useState(ROOM_LIST[0].id);
+  const [rangeRoom, setRangeRoom]   = useState(defaultRoomId);
   const [rangeStart, setRangeStart] = useState(todayStr());
   const [rangeEnd, setRangeEnd]     = useState(todayStr());
   const [weekdays, setWeekdays]     = useState([1,2,3,4,5]); // Mon-Fri default
@@ -83,7 +91,7 @@ function BulkBookingForm({ bookings, onBook, onClose, currentUser }) {
   }
 
   const roomsBySite = SITES.reduce((acc,s)=>{
-    const rooms=ROOM_LIST.filter(r=>r.site===s);
+    const rooms=(currentUser.isApprover ? ROOM_LIST : nonClinicalRooms).filter(r=>r.site===s);
     if(rooms.length) acc[s]=rooms;
     return acc;
   },{});

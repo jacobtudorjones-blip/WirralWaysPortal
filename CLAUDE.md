@@ -233,6 +233,27 @@ plain JS (not TypeScript) project with no test suite yet.
   `r.types.includes(filters.type)` rather than `r.type === filters.type`.
   When adding a room, give it a `types` array (one or more of the 5
   tags), not a bare `type` string.
+- A room tagged `"Clinical Room"` can only be *requested* by an approver
+  — a non-approver can still see it everywhere (floor plans, weekly/daily
+  view, room cards) including its booked/free status, same as any other
+  room; they just can't submit a request for it. Enforced in
+  `BookingForm.jsx` (`isClinicalRoom()`, a local helper — not exported,
+  duplicated the same way in `BulkBookingForm.jsx` rather than shared,
+  matching this project's usual small-local-copy approach) and in
+  `BulkBookingForm.jsx`'s three room pickers (`dates`/`rooms`/`range`
+  modes) the same way. `BookingForm.jsx` shows a small "blocked" panel
+  (room name + "please speak to admin") instead of the real form when it
+  was opened directly for a clinical room via `preRoom` (every
+  Request/free-slot-click entry point across the app funnels through
+  this one component, so the check lives here rather than at each call
+  site); both forms' room `<select>` dropdowns simply omit clinical rooms
+  from the list for a non-approver, so they can't pick one that way
+  either. `RoomInfoCard.jsx` shows an "APPROVER BOOKING ONLY" badge on
+  every clinical room card, for everyone, so this isn't a dead-end
+  surprise on click. Same client-side-only caveat as every other
+  permission check in this app (see APPROVERS above) — this stops
+  casual use of the form, not a determined person calling Supabase's
+  REST API directly.
 - Room photos work the same way site photos already did for Staff Portal
   (`SiteTile.jsx`, `public/sites/*.jpg`): every room gets a computed
   `image = "/rooms/" + slug + ".jpg"` field in `data/rooms.js`'s `ROOMS`

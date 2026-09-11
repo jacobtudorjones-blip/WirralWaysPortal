@@ -19,7 +19,10 @@ function RoomInfoCard({ room, onRequest, onView }) {
             {room.icon&&<span style={{fontSize:18,lineHeight:1}}>{room.icon}</span>}
             <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e",lineHeight:1.3}}>{room.name}</div>
           </div>
-          {room.staffOnly&&<span style={{background:CGL.lavender,color:CGL.amethyst,fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:10,letterSpacing:0.5,flexShrink:0,marginLeft:6}}>STAFF ONLY</span>}
+          <div style={{display:"flex",gap:5,flexShrink:0,marginLeft:6}}>
+            {room.staffOnly&&<span style={{background:CGL.lavender,color:CGL.amethyst,fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:10,letterSpacing:0.5}}>STAFF ONLY</span>}
+            {room.types.includes("Clinical Room")&&<span style={{background:CGL.raspberry+"18",color:CGL.raspberry,fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:10,letterSpacing:0.5}} title="Clinical spaces can only be booked by an approver">APPROVER BOOKING ONLY</span>}
+          </div>
         </div>
         <div style={{fontSize:11,fontWeight:700,color:room.color,marginBottom:8}}>{room.type}</div>
 
