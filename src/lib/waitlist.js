@@ -3,6 +3,7 @@
 import { loadKey, saveKey } from "./storage.js";
 import { ROOMS } from "../data/rooms.js";
 import { sendEmail } from "./email.js";
+import { buildHtmlEmail } from "./emailHtml.js";
 
 async function loadWaitlist() { return await loadKey("ww_waitlist_v1") || []; }
 async function saveWaitlist(wl) { await saveKey("ww_waitlist_v1", wl); }
@@ -19,11 +20,18 @@ async function notifyWaitlist(roomId, date, startTime, endTime, title) {
   const matches = wl.filter(w=>w.roomId===roomId&&w.date===date&&w.startTime===startTime);
   if(!matches.length) return;
   const room = ROOMS[roomId];
+  // portal.wirralways.org.uk/rooms/<slug>, not the old rooms.wirralways.org.uk
+  // subdomain — that never existed post-restructure (see CLAUDE.md); deep-links
+  // straight to this room via its slug (data/rooms.js's ROOM_BY_SLUG).
+  const roomUrl = "https://portal.wirralways.org.uk/rooms/" + room.slug;
   for(const w of matches) {
+    const body = "Hi "+(w.name.split(" ")[0])+",\n\nA room you were waiting for has just become available.\n\nRoom: "+(room.name)+" ("+(room.site)+")\nDate: "+(new Date(date+"T00:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"}))+"\nTime: "+(startTime)+"–"+(endTime)+"\n\nRequest it now — it's first come, first served.\n\nWirral Ways Room Booking";
     await sendEmail(
       w.email,
       "Room now available — "+(room.name)+", "+(new Date(date+"T00:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})),
-      "Hi "+(w.name.split(" ")[0])+",\n\nA room you were waiting for has just become available.\n\nRoom: "+(room.name)+" ("+(room.site)+")\nDate: "+(new Date(date+"T00:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"}))+"\nTime: "+(startTime)+"–"+(endTime)+"\n\nLog in to rooms.wirralways.org.uk to request it now — it's first come, first served.\n\nWirral Ways Room Booking"
+      body,
+      undefined, undefined,
+      buildHtmlEmail(body, [{ label: "Request this room", url: roomUrl }])
     );
   }
   // Remove notified entries

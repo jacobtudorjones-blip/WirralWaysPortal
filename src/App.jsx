@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { CGL, APPROVERS, REQUEST_NOTIFY_EMAILS, GENERIC_BOOKING_EMAIL, ROOM_CALENDAR_EMAIL, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
 import { genId, norm, todayStr, toDateStr, nowStr, formatDate, formatDateShort, formatTime } from "./lib/helpers.js";
 import { loadKey, saveKey } from "./lib/storage.js";
-import { addToWaitlist } from "./lib/waitlist.js";
+import { addToWaitlist, notifyWaitlist } from "./lib/waitlist.js";
 import { sendEmail } from "./lib/email.js";
 import { buildHtmlEmail } from "./lib/emailHtml.js";
 import { buildICS, buildCalendarInviteICS } from "./lib/ics.js";
@@ -449,9 +449,14 @@ function App() {
     } else {
       // Non-recurring — cancel immediately
       persistB(bookings.map(bk=>bk.id===id?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk));
-      // Only had a calendar entry to remove if it was actually confirmed —
-      // a pending/rejected booking never got one in the first place.
-      if(b.status==="confirmed") syncRoomCalendar(b,"cancelled");
+      // Only had a calendar entry to remove — and only actually freed a
+      // slot anyone was blocked from — if it was confirmed; a
+      // pending/rejected booking never blocked hasConflict() in the
+      // first place, so there's no one waiting on it to notify.
+      if(b.status==="confirmed") {
+        syncRoomCalendar(b,"cancelled");
+        notifyWaitlist(b.roomId, b.date, b.startTime, b.endTime, b.title);
+      }
       addAudit("booking_cancelled", "\"" + b.title + "\" cancelled — " + ROOMS[b.roomId].name + ", " + formatDateShort(b.date), user.name);
     }
   }
@@ -473,9 +478,14 @@ function App() {
       updated = bookings.map(bk=>affects(bk)?{...bk,status:"cancelled",cancelledBy:user.name,cancelledAt:nowStr()}:bk);
       addAudit("booking_cancelled", "\"" + b.title + "\" cancelled (entire series) — " + ROOMS[b.roomId].name, user.name);
     }
-    // Only remove calendar entries for bookings that were actually
-    // confirmed (had one to remove) before this cancellation.
-    bookings.filter(bk=>affects(bk)&&bk.status==="confirmed").forEach(bk=>syncRoomCalendar(bk,"cancelled"));
+    // Only remove calendar entries / notify the waitlist for bookings
+    // that were actually confirmed (had a slot to free) before this
+    // cancellation — same reasoning as handleCancelClick's single-booking
+    // path above.
+    bookings.filter(bk=>affects(bk)&&bk.status==="confirmed").forEach(bk=>{
+      syncRoomCalendar(bk,"cancelled");
+      notifyWaitlist(bk.roomId, bk.date, bk.startTime, bk.endTime, bk.title);
+    });
     persistB(updated);
     setCancelModal(null);
   }

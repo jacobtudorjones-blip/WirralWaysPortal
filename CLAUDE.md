@@ -560,18 +560,26 @@ plain JS (not TypeScript) project with no test suite yet.
   `"autoReleased"` is still a valid historical `status` a booking can
   carry (`StatusBadge.jsx` still renders it; `hasConflict` above still
   treats it as non-blocking) for anything auto-released before this was
-  removed — nothing creates new ones anymore. `notifyWaitlist`
-  (`src/lib/waitlist.js`) lost its only call site in this removal — the
-  🔔 waitlist feature (`addToWaitlist`, still live in `BookingForm.jsx`/
-  `DaySchedulePicker.jsx`) currently has **no trigger anywhere** that
-  actually emails someone when their slot frees up, since it was never
-  wired into manual cancellation either (`handleCancelClick`/
-  `handleCancelWithScope`) — joining the waitlist promises an email
-  ("We'll email you if it becomes free") that nothing currently sends.
-  Flagged, not fixed, since wiring it to cancellation is separate scope
-  from removing auto-release — check with whoever asked for this removal
-  before deciding whether to wire it up. If auto-release itself comes
-  back, consider making it opt-in per room rather than portal-wide.
+  removed — nothing creates new ones anymore. This removal took
+  `notifyWaitlist`'s (`src/lib/waitlist.js`) only call site with it, so
+  it's now wired into manual cancellation instead — `handleCancelClick`'s
+  non-recurring branch and `handleCancelWithScope` (App.jsx) both call it
+  alongside `syncRoomCalendar(bk,"cancelled")`, same "only if it was
+  actually confirmed" guard (a pending/rejected booking never blocked
+  `hasConflict()` in the first place, so there's no one waiting on it).
+  Without this, the 🔔 waitlist feature (`addToWaitlist`, still live in
+  `BookingForm.jsx`/`DaySchedulePicker.jsx`) would have had **no trigger
+  anywhere** — it was never wired into cancellation before either, only
+  into auto-release, so removing auto-release without this would have
+  left "We'll email you if it becomes free" a promise nothing kept.
+  While touching this, also fixed `notifyWaitlist`'s email: it still
+  linked to the stale pre-restructure `rooms.wirralways.org.uk`
+  subdomain (see the booking-emails bullet above on that exact issue)
+  and was plain-text only — now links to `portal.wirralways.org.uk/
+  rooms/<slug>` and goes through `buildHtmlEmail()` like every other
+  notification email in the project, with a "Request this room" button.
+  If auto-release itself comes back, consider making it opt-in per room
+  rather than portal-wide.
 - Staff Portal admin access (`/staff/admin`, `/staff/admin/users`) and the
   "Who's in" gate work exactly like APPROVERS above: an email checked
   against the `role` column on `staff_users`, client-side, no real auth.
