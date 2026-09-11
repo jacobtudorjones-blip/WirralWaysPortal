@@ -401,8 +401,9 @@ plain JS (not TypeScript) project with no test suite yet.
   stayed pending, never had a calendar entry to remove. Wired into every
   path that changes confirmed status: `handleBook`/`handleApprove`/
   `handleBulkBook`'s auto-approve branches, `handleCancelClick`/
-  `handleCancelWithScope`, `handleEdit`, and the auto-release effect
-  (App.jsx); `BookCar.jsx`'s submit/bulk auto-approve branches,
+  `handleCancelWithScope`, `handleEdit` (App.jsx — the auto-release
+  effect that used to also call this was removed, see below);
+  `BookCar.jsx`'s submit/bulk auto-approve branches,
   `CarApprovals.jsx`'s approve, `MyCarBookings.jsx`'s cancel.
   **Caveat**: Brevo (the only way this project sends email — see the
   Brevo bullet above) is a transactional ESP, not a mail client speaking
@@ -549,6 +550,28 @@ plain JS (not TypeScript) project with no test suite yet.
 - `hasConflict` (src/lib/helpers.js) only treats `status === "confirmed"`
   bookings as blocking — pending/cancelled/auto-released bookings are
   intentionally not conflict sources.
+- Auto-release — a `useEffect` in `App.jsx` that used to mark any
+  confirmed today's booking `status:"autoReleased"` (freeing the room,
+  notifying the waitlist) if nobody checked in within 30 minutes of its
+  start time — is **removed**, on request. It was silently clearing
+  rooms used for sessions where checking in through the app was never
+  realistic (e.g. Sunflower Room's dense recurring 1-2-1s), which looked
+  like "bookings aren't staying" rather than what it actually was.
+  `"autoReleased"` is still a valid historical `status` a booking can
+  carry (`StatusBadge.jsx` still renders it; `hasConflict` above still
+  treats it as non-blocking) for anything auto-released before this was
+  removed — nothing creates new ones anymore. `notifyWaitlist`
+  (`src/lib/waitlist.js`) lost its only call site in this removal — the
+  🔔 waitlist feature (`addToWaitlist`, still live in `BookingForm.jsx`/
+  `DaySchedulePicker.jsx`) currently has **no trigger anywhere** that
+  actually emails someone when their slot frees up, since it was never
+  wired into manual cancellation either (`handleCancelClick`/
+  `handleCancelWithScope`) — joining the waitlist promises an email
+  ("We'll email you if it becomes free") that nothing currently sends.
+  Flagged, not fixed, since wiring it to cancellation is separate scope
+  from removing auto-release — check with whoever asked for this removal
+  before deciding whether to wire it up. If auto-release itself comes
+  back, consider making it opt-in per room rather than portal-wide.
 - Staff Portal admin access (`/staff/admin`, `/staff/admin/users`) and the
   "Who's in" gate work exactly like APPROVERS above: an email checked
   against the `role` column on `staff_users`, client-side, no real auth.

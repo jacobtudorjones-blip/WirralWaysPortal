@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CGL, APPROVERS, REQUEST_NOTIFY_EMAILS, GENERIC_BOOKING_EMAIL, ROOM_CALENDAR_EMAIL, ROOMS, ROOM_LIST, ROOM_BY_SLUG, SITES, SITE_COLOR } from "./data/rooms.js";
 import { genId, norm, todayStr, toDateStr, nowStr, formatDate, formatDateShort, formatTime } from "./lib/helpers.js";
-import { slotToMins } from "./lib/slots.js";
 import { loadKey, saveKey } from "./lib/storage.js";
-import { addToWaitlist, notifyWaitlist } from "./lib/waitlist.js";
+import { addToWaitlist } from "./lib/waitlist.js";
 import { sendEmail } from "./lib/email.js";
 import { buildHtmlEmail } from "./lib/emailHtml.js";
 import { buildICS, buildCalendarInviteICS } from "./lib/ics.js";
@@ -146,48 +145,18 @@ function App() {
     sendReminders();
   },[bookings.length]); // re-check when bookings change
 
-  // ── AUTO-RELEASE: every 5 min, mark unattended bookings as autoReleased ──────
-  useEffect(()=>{
-    function check() {
-      const now = new Date();
-      const todayS = toDateStr(now);
-      const nowMins = now.getHours()*60 + now.getMinutes();
-      setBookings(prev=>{
-        const needsRelease = prev.filter(b=>
-          b.status==="confirmed" &&
-          b.date===todayS &&
-          !b.checkedIn &&
-          !b.autoReleased &&
-          !b.usageStatus &&
-          slotToMins(b.startTime) + 30 <= nowMins // 30 min grace after start
-        );
-        if(needsRelease.length===0) return prev;
-        const updated = prev.map(b=>
-          needsRelease.find(r=>r.id===b.id)
-            ? {...b, status:"autoReleased", autoReleased:true, autoReleasedAt:now.toISOString()}
-            : b
-        );
-        // Notify waitlist for each released booking
-        needsRelease.forEach(b=>{
-          const roomName = ROOMS[b.roomId] ? ROOMS[b.roomId].name : b.roomId;
-          notifyWaitlist(b.roomId, b.date, b.startTime, b.endTime, b.title);
-          // The room's genuinely free again (hasConflict() doesn't treat
-          // autoReleased as blocking) — remove the stale calendar entry
-          // rather than leaving the shared calendar showing it as booked.
-          syncRoomCalendar(b, "cancelled");
-          addAudit("booking_cancelled",
-            '"' + b.title + '" auto-released (no check-in after 30 min) — ' + roomName,
-            "System"
-          );
-        });
-        saveKey("ww_bookings_v4", updated);
-        return updated;
-      });
-    }
-    check(); // run immediately on mount
-    const t = setInterval(check, 5*60*1000);
-    return ()=>clearInterval(t);
-  },[]);
+  // Auto-release (marking a confirmed booking "autoReleased" if nobody
+  // checked in within 30 min of its start time, freeing the room and
+  // notifying the waitlist) is REMOVED for now, on request — it was
+  // silently clearing out rooms used for sessions where checking in via
+  // the app was never realistic (e.g. Sunflower Room's 1-2-1s), making
+  // real bookings look like they "weren't staying". `autoReleased` is
+  // still a valid historical `status` value (StatusBadge.jsx still
+  // renders it, hasConflict() in lib/helpers.js still treats it as
+  // non-blocking) for any booking that was auto-released before this was
+  // removed — just nothing creates new ones anymore. Don't reintroduce
+  // this without checking it's still wanted, and if it comes back,
+  // consider making it opt-in per room rather than portal-wide.
 
   // Process login notifications once both user identity and bookings data are available
   function _processLogin(identity, loadedBookings) {
